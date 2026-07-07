@@ -13,6 +13,11 @@ changes in this file.
   advertise the 6.1 → 7.0 range. No driver source changed — the existing
   6.17/6.18 `LINUX_VERSION_CODE` gates already carry the build across the
   7.0 boundary.
+- **CI now builds against current mainline kernels.** A new `build-mainline`
+  job compiles the module against the latest kernel.org stable and longterm
+  releases, resolved at run time (so it tracks 6.19 / 7.0 and beyond without
+  edits). Previously CI only exercised the GitHub runner's distro kernel
+  (~6.8-6.11), so post-6.18 breakage could reach users unnoticed.
 
 ### Verified
 

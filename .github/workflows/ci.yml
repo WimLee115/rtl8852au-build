@@ -75,6 +75,73 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # ── Build against current mainline kernels (kernel.org) ────────────────
+  # The distro-kernel matrix above only exercises the GitHub runner kernel
+  # (~6.8-6.11). This job builds against the newest kernel.org stable and
+  # longterm releases — resolved at run time, so it tracks 6.19 / 7.0 and
+  # beyond automatically — so post-6.18 API breakage is caught in CI rather
+  # than by users. Uses `modules_prepare` against a fetched source tree.
+  build-mainline:
+    name: Build (mainline ${{ matrix.channel }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [stable, longterm]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential bc bison flex libssl-dev libelf-dev xz-utils jq curl
+
+      - name: Resolve ${{ matrix.channel }} kernel version
+        id: kver
+        run: |
+          curl -fsSL https://www.kernel.org/releases.json -o releases.json
+          if [ "${{ matrix.channel }}" = "stable" ]; then
+            ver="$(jq -r '.latest_stable.version' releases.json)"
+          else
+            ver="$(jq -r '[.releases[] | select(.moniker == "longterm")][0].version' releases.json)"
+          fi
+          if [ -z "$ver" ] || [ "$ver" = "null" ]; then
+            echo "::error::could not resolve ${{ matrix.channel }} kernel version"; exit 1
+          fi
+          echo "Selected ${{ matrix.channel }} kernel: $ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
+          echo "major=${ver%%.*}" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch and prepare kernel ${{ steps.kver.outputs.ver }}
+        run: |
+          ver="${{ steps.kver.outputs.ver }}"
+          major="${{ steps.kver.outputs.major }}"
+          curl -fsSL "https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${ver}.tar.xz" -o linux.tar.xz
+          tar xf linux.tar.xz
+          make -C "linux-${ver}" defconfig
+          make -C "linux-${ver}" modules_prepare
+
+      - name: Build module against mainline ${{ steps.kver.outputs.ver }}
+        run: |
+          ver="${{ steps.kver.outputs.ver }}"
+          krel="$(make -s -C "linux-${ver}" kernelrelease)"
+          echo "kernelrelease = ${krel}"
+          sudo mkdir -p "/lib/modules/${krel}"
+          sudo ln -sfn "${PWD}/linux-${ver}" "/lib/modules/${krel}/build"
+          make modules KVER="${krel}" -j"$(nproc)" 2>&1 | tee build-mainline.log
+          test -f 8852au.ko
+          modinfo ./8852au.ko | grep -E "vermagic|^version" || true
+
+      - name: Warning / error summary
+        run: |
+          warn="$(grep -cE 'warning:' build-mainline.log || true)"
+          err="$(grep -cE ': error:' build-mainline.log || true)"
+          echo "mainline ${{ steps.kver.outputs.ver }}: errors=${err} warnings=${warn}"
+          test "${err}" = "0"
+
   # ── DKMS install/remove dry-run (validates the helper scripts) ─────────
   dkms:
     name: DKMS scripts dry-run
