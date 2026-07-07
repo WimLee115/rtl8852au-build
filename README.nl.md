@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![Licentie: GPL-2.0](https://img.shields.io/badge/licentie-GPL--2.0-blue.svg)](LICENSE)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%206.19%2B-informational.svg)](#compatibiliteit)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0%2B-informational.svg)](#compatibiliteit)
 
 Out-of-tree Linux-driver voor USB-WiFi-adapters gebaseerd op de Realtek
 **RTL8852AU**- en **RTL8832AU**-chipsets (WiFi 6, AX1800). De upstream
@@ -241,10 +241,11 @@ sudo ./tests/run_tests.sh --all          # alles, inclusief destructief
 | Distributie                  | Kernel             | Architectuur | Geverifieerd door     |
 |------------------------------|--------------------|--------------|-----------------------|
 | Kali Linux Rolling 2026.1    | 6.19.14+kali-amd64 | x86_64       | Maintainer-hardware   |
+| Kali Linux Rolling           | 7.0.12+kali-amd64  | x86_64       | Maintainer-build      |
 | Ubuntu 22.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 | Ubuntu 24.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 
-Andere kernels in het bereik 6.1 LTS → 6.19+ worden verwacht te
+Andere kernels in het bereik 6.1 LTS → 7.0+ worden verwacht te
 compileren omdat elke patch gebonden is aan een
 `LINUX_VERSION_CODE`-conditie, maar zijn niet door de maintainer
 geverifieerd.

@@ -7,7 +7,21 @@ changes in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- **Documented kernel 7.0 support.** The compatibility badge and table now
+  advertise the 6.1 → 7.0 range. No driver source changed — the existing
+  6.17/6.18 `LINUX_VERSION_CODE` gates already carry the build across the
+  7.0 boundary.
+
 ### Verified
+
+- **Clean build against Linux 7.0.12+kali-amd64** (Kali `7.0.12-2kali1`,
+  2026-06-18, GCC 15.3.0): `make` exits 0 and `8852au.ko` links with BTF
+  (vermagic `7.0.12+kali-amd64 SMP preempt mod_unload`). Only the vendor
+  tree's usual `-Wmissing-prototypes` warnings, **zero errors, no new
+  patches required.** Compile-verified only — not hardware-tested on this
+  kernel (no adapter attached to the build host).
 
 - **Patch 0007 (`netdev_close` mutex + skip-on-remove) is now
   hardware-validated** on a TP-Link Archer TX20U Plus (`2357:013f`)

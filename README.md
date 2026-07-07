@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%206.19%2B-informational.svg)](#compatibility)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0%2B-informational.svg)](#compatibility)
 
 Out-of-tree Linux driver for USB WiFi adapters based on the Realtek
 **RTL8852AU** and **RTL8832AU** (WiFi 6, AX1800) chipsets. The upstream
@@ -231,10 +231,11 @@ sudo ./tests/run_tests.sh --all          # everything, including destructive
 | Distribution               | Kernel             | Arch    | Verified by         |
 |----------------------------|--------------------|---------|---------------------|
 | Kali Linux Rolling 2026.1  | 6.19.14+kali-amd64 | x86_64  | Maintainer hardware |
+| Kali Linux Rolling         | 7.0.12+kali-amd64  | x86_64  | Maintainer build    |
 | Ubuntu 22.04 LTS           | distro default     | x86_64  | CI build matrix     |
 | Ubuntu 24.04 LTS           | distro default     | x86_64  | CI build matrix     |
 
-Other kernels in the 6.1 LTS → 6.19+ range are expected to compile
+Other kernels in the 6.1 LTS → 7.0+ range are expected to compile
 because every patch is gated on the relevant `LINUX_VERSION_CODE`, but
 they are not verified by the maintainer.
 
