@@ -145,7 +145,7 @@ jobs:
           echo "kernelrelease = ${krel}"
           sudo mkdir -p "/lib/modules/${krel}"
           sudo ln -sfn "${PWD}/linux-${ver}" "/lib/modules/${krel}/build"
-          make modules KVER="${krel}" -j"$(nproc)" 2>&1 | tee build-mainline.log
+          make KVER="${krel}" -j"$(nproc)" 2>&1 | tee build-mainline.log
           test -f 8852au.ko
           modinfo ./8852au.ko | grep -E "vermagic|^version" || true
 
