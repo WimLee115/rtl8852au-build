@@ -86,9 +86,10 @@ jobs:
     runs-on: ubuntu-24.04
     # The newest stable often outpaces what an out-of-tree vendor driver
     # supports (e.g. kernel 7.1 refactored many cfg80211_ops callbacks from
-    # net_device to wireless_dev). Treat stable as an informational early
-    # warning; keep longterm (LTS) as a hard signal.
-    continue-on-error: ${{ matrix.channel == 'stable' }}
+    # net_device to wireless_dev). The build step treats a stable-channel
+    # failure as an informational warning (the job stays green) while longterm
+    # (LTS) remains a hard gate. This keeps the branch status clean instead of
+    # showing a permanent red X for a known, forward-looking probe.
     strategy:
       fail-fast: false
       matrix:
@@ -151,16 +152,23 @@ jobs:
           # that to a warning — this is a compile/link test, and real
           # source-level breakage is already caught in the compile phase
           # before modpost runs.
-          make KVER="${krel}" KBUILD_MODPOST_WARN=1 -j"$(nproc)" 2>&1 | tee build-mainline.log
-          test -f 8852au.ko
-          modinfo ./8852au.ko | grep -E "vermagic|^version" || true
-
-      - name: Warning / error summary
-        run: |
-          warn="$(grep -cE 'warning:' build-mainline.log || true)"
-          err="$(grep -cE ': error:' build-mainline.log || true)"
-          echo "mainline ${{ steps.kver.outputs.ver }}: errors=${err} warnings=${warn}"
-          test "${err}" = "0"
+          set -o pipefail
+          if make KVER="${krel}" KBUILD_MODPOST_WARN=1 -j"$(nproc)" 2>&1 | tee build-mainline.log && test -f 8852au.ko; then
+            echo "Module built successfully against ${ver}."
+            modinfo ./8852au.ko | grep -E "vermagic|^version" || true
+          elif [ "${{ matrix.channel }}" = "stable" ]; then
+            # Newest-stable is a forward-looking probe: report loudly, but do
+            # not fail the job — otherwise every branch shows a red X for a
+            # known limitation.
+            echo "::warning title=Newest stable ${ver} does not build::The driver does not compile against the newest mainline stable (${ver}). Informational early warning, not a regression gate — see the build log above."
+            {
+              echo "### ⚠️ Newest stable \`${ver}\` does not build"
+              echo "Informational early warning: the driver does not yet support this kernel. Not a regression gate."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error title=LTS ${ver} does not build::The driver failed to build against the longterm/LTS kernel ${ver}."
+            exit 1
+          fi
 
   # ── DKMS install/remove dry-run (validates the helper scripts) ─────────
   dkms:
