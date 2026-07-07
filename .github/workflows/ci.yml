@@ -84,6 +84,11 @@ jobs:
   build-mainline:
     name: Build (mainline ${{ matrix.channel }})
     runs-on: ubuntu-24.04
+    # The newest stable often outpaces what an out-of-tree vendor driver
+    # supports (e.g. kernel 7.1 refactored many cfg80211_ops callbacks from
+    # net_device to wireless_dev). Treat stable as an informational early
+    # warning; keep longterm (LTS) as a hard signal.
+    continue-on-error: ${{ matrix.channel == 'stable' }}
     strategy:
       fail-fast: false
       matrix:

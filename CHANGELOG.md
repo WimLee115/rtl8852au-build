@@ -17,7 +17,26 @@ changes in this file.
   job compiles the module against the latest kernel.org stable and longterm
   releases, resolved at run time (so it tracks 6.19 / 7.0 and beyond without
   edits). Previously CI only exercised the GitHub runner's distro kernel
-  (~6.8-6.11), so post-6.18 breakage could reach users unnoticed.
+  (~6.8-6.11), so post-6.18 breakage could reach users unnoticed. The
+  `stable` channel is currently informational (non-blocking): kernel 7.1
+  refactored a large set of `cfg80211_ops` callbacks from `net_device` to
+  `wireless_dev`, which needs a dedicated version-gated port; `longterm`
+  (LTS) stays a hard signal.
+
+### Fixed
+
+- **`-Werror=empty-body` on strict (CONFIG_WERROR) kernel trees.** With
+  `CONFIG_DBG_COUNTER` off, the `DBG_COUNTER()` macro expanded to nothing,
+  leaving empty `if`/`else` bodies (80+ call sites). It now expands to
+  `do {} while (0)`. Surfaced by the new mainline CI build; harmless on
+  distro headers, which do not build the module with `-Werror`.
+
+### Known limitations
+
+- **Kernel 7.1 is not yet supported.** The `cfg80211_ops` net_device →
+  wireless_dev refactor in 7.1 breaks the station/key callbacks. Kernels up
+  to and including 7.0 build cleanly. A version-gated port is tracked as
+  follow-up work.
 
 ### Verified
 
