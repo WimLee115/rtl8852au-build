@@ -127,6 +127,15 @@ jobs:
           curl -fsSL "https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${ver}.tar.xz" -o linux.tar.xz
           tar xf linux.tar.xz
           make -C "linux-${ver}" defconfig
+          # The vendored Realtek tree carries many benign code-style warnings
+          # (empty-body, etc.). A fresh defconfig builds modules with
+          # CONFIG_WERROR=y (distro headers do not), turning those into hard
+          # errors. Disable it so this job tests real buildability, not vendor
+          # code style. Genuine type breakage (e.g. 7.1's cfg80211
+          # incompatible-pointer-types) uses a separate unconditional -Werror
+          # and still fails correctly.
+          ./linux-${ver}/scripts/config --file "linux-${ver}/.config" --disable WERROR
+          make -C "linux-${ver}" olddefconfig
           make -C "linux-${ver}" modules_prepare
 
       - name: Build module against mainline ${{ steps.kver.outputs.ver }}
