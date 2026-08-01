@@ -78,7 +78,7 @@ vermeld in [`CONTRIBUTORS.nl.md`](CONTRIBUTORS.nl.md).
 
 ## Release-proces
 
-De maintainer tagt releases als `v<vendor-versie>+<fork-count>`
-(bijvoorbeeld `v1.15.0.1+7`). CI bouwt artefacten; zodra die groen
+De maintainer tagt releases volgens SemVer `vMAJOR.MINOR.PATCH`
+(bijvoorbeeld `v1.16.0`). CI bouwt artefacten; zodra die groen
 zijn wordt een GitHub-release uitgebracht met de CHANGELOG-entry
 gekopieerd uit `CHANGELOG.md`.

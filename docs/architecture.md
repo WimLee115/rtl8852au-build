@@ -102,7 +102,7 @@ sequenceDiagram
     CI-->>Dev: all checks green
     Dev->>Patches: git format-patch -1 -> patches/00NN-*.patch
     Patches->>Source: stays in sync with tree
-    Dev->>Source: tag v1.15.0.1+N (annotated)
+    Dev->>Source: tag vX.Y.Z SemVer (annotated)
 ```
 
 ## Lifecycle of a dashboard status update
