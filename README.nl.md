@@ -433,6 +433,9 @@ Zoals bij elke out-of-tree-kernelmodule wordt de software
 - **[WimLee115](https://github.com/WimLee115)** — fork-onderhoud,
   kernel-compatibiliteit-patches, test suite, dashboard.
 
+Zie [`CONTRIBUTORS.md`](CONTRIBUTORS.md) voor de volledige lijst met
+bijdragers en acknowledgements.
+
 ## Licentie
 
 GNU General Public License v2.0 — zie [`LICENSE`](LICENSE). De
