@@ -156,6 +156,7 @@ USB-adapters gebaseerd op de **RTL8852AU**- of
 | `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Herkend    |
 | `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Herkend    |
 | `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Herkend    |
+| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Herkend    |
 | `35bc:0100`  | TP-Link AX1800 (generiek)      | RTL8852AU  | Herkend    |
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest** |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend    |
@@ -426,7 +427,9 @@ Zoals bij elke out-of-tree-kernelmodule wordt de software
 - **[morrownr](https://github.com/morrownr)** — USB-WiFi-adapter
   documentatie, USB-ID-referenties, onderhoudspatronen.
 - **[Joan Sala (`jsiwrk`)](https://github.com/jsiwrk)** — TP-Link
-  Archer TX35U Plus USB-ID (PR #3).
+  Archer TX35U Plus USB-ID en de kernel 6.8-buildfix (PR #3).
+- **[74Thirsty (`gadgetsaavy`)](https://github.com/74Thirsty)** — D-Link
+  DWA-1850 USB-ID `2001:332c` en testen op Parrot OS 6/7 (PR #14).
 - **[WimLee115](https://github.com/WimLee115)** — fork-onderhoud,
   kernel-compatibiliteit-patches, test suite, dashboard.
 
