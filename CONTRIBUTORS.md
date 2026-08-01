@@ -1,5 +1,7 @@
 # Contributors
 
+**English** | [Nederlands](CONTRIBUTORS.nl.md)
+
 Everyone who has helped make **rtl8852au-build** what it is. This mirrors
 the credits in the [README](README.md) and [CHANGELOG](CHANGELOG.md); the
 GitHub [contributors graph](https://github.com/WimLee115/rtl8852au-build/graphs/contributors)
