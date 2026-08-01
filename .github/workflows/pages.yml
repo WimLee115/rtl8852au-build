@@ -1,0 +1,64 @@
+name: Deploy Pages
+
+# Publishes the static site in docs/ to GitHub Pages via the official
+# Pages deployment (NOT Jekyll — the artifact is served verbatim, so
+# docs/.nojekyll is belt-and-suspenders here). One-time setup: in
+# Settings → Pages, set "Build and deployment → Source" to "GitHub Actions".
+on:
+  push:
+    branches: [main]
+    # Only redeploy when the site (or this workflow) actually changes.
+    # Remove this paths filter to redeploy on every push to main.
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# Least-privilege GITHUB_TOKEN: read the repo, write Pages, and mint the
+# OIDC token deploy-pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deployments at once; let an in-flight deploy finish
+# rather than cancelling it half-published.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # ── Package docs/ into a Pages artifact ────────────────────────────────
+  build:
+    name: Build Pages artifact
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Sanity-check the site
+        run: |
+          test -f docs/index.html || { echo "::error::docs/index.html is missing"; exit 1; }
+          echo "Publishing $(find docs -type f | wc -l) files from docs/:"
+          find docs -maxdepth 1 -type f -printf '  %P\n'
+
+      - name: Configure Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
+
+      - name: Upload docs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3
+        with:
+          path: docs
+
+  # ── Deploy the artifact to the github-pages environment ────────────────
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4
