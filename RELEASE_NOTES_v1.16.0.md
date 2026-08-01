@@ -52,7 +52,7 @@ This is the first release under the fork's **own SemVer line**. Earlier fork tag
 
 ## Credits
 
-Realtek (original vendor driver), [lwfinger](https://github.com/lwfinger) and [morrownr](https://github.com/morrownr) (community packaging & USB-ID references), and [jsiwrk](https://github.com/jsiwrk) (TP-Link Archer TX35U Plus USB ID, PR #3).
+Realtek (original vendor driver), [lwfinger](https://github.com/lwfinger) and [morrownr](https://github.com/morrownr) (community packaging & USB-ID references), [jsiwrk](https://github.com/jsiwrk) (TP-Link Archer TX35U Plus USB ID and the kernel 6.8 build fix, PR #3), and [74Thirsty](https://github.com/74Thirsty) (D-Link DWA-1850 USB ID `2001:332c` and Parrot OS 6/7 testing, PR #14).
 
 ---
 
