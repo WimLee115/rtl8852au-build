@@ -400,6 +400,9 @@ driver-source patches. In short:
 - **[WimLee115](https://github.com/WimLee115)** — fork maintenance,
   kernel-compatibility patches, test suite, dashboard.
 
+See [`CONTRIBUTORS.md`](CONTRIBUTORS.md) for the full list of contributors
+and acknowledgements.
+
 ## Disclaimer
 
 This is an **independent community fork**. It is not affiliated with,
