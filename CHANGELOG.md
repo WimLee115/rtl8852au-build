@@ -7,6 +7,35 @@ changes in this file.
 
 ## [Unreleased]
 
+_Nothing yet — changes land here until the next tag is cut._
+
+## [1.16.0] — 2026-08-01
+
+First release under the fork's **own SemVer line**.
+
+> **Versioning note.** Earlier fork tags used the vendor-derived
+> `1.15.0.1+N` scheme; the immediate predecessor of this release is
+> `1.15.0.1+8` (2026-05-11). Starting here the fork adopts plain
+> SemVer, beginning at `1.16.0` — one step above the Realtek
+> `1.15.0.1` baseline, so the version keeps climbing from the previous
+> tag instead of appearing to roll back. The upstream Realtek baseline
+> remains `v1.15.0.1-2`, and every fork change is still tracked in this
+> file and exported under [`patches/`](patches/).
+
+### Highlights
+
+- **Builds on kernel 6.1 → 7.0+** — twelve version-gated compatibility
+  patches, now continuously built against distro kernels *and* the
+  newest kernel.org stable and longterm releases in CI.
+- **Stable monitor mode** — four RX-path crash fixes (UBSAN OOB,
+  NULL-deref, SKB use-after-free, race/double-free) plus a
+  hardware-validated fix for the `rmmod`-while-associated panic.
+- **Batteries included** — idempotent DKMS install, a loopback-only
+  Flask dashboard with per-host auth, a live-adapter `unittest` suite,
+  hash-locked Python deps, firmware-blob checksums, and EN/NL docs.
+
+The entries below are the changes since `1.15.0.1+8`.
+
 ### Changed
 
 - **Documented kernel 7.0 support.** The compatibility badge and table now

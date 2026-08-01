@@ -59,6 +59,9 @@ modules.builtin
 !.mailmap
 !.github
 !.github/**
+# docs/.nojekyll is a dotfile (caught by the ".*" rule above) but must be
+# committed so GitHub Pages serves docs/ verbatim, without Jekyll.
+!docs/.nojekyll
 
 # Firmware: uncompressed version (generated from .xz at build time)
 phl/hal_g6/mac/fw_ax/rtl8852a/hal8852a_fw.c
@@ -108,4 +111,7 @@ __pycache__/
 
 # Test artifacts
 tests/test_report.json
+
+# Local promotion drafts (personal notes, not part of the shipped project)
+/docs/PROMOTION.md
 

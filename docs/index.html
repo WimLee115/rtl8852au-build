@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rtl8852au-build — Linux WiFi 6 driver for Realtek RTL8852AU / RTL8832AU</title>
+<meta name="description" content="Out-of-tree Linux driver for Realtek RTL8852AU / RTL8832AU USB WiFi 6 (AX1800) adapters. Builds on kernel 6.1 → 7.0+, stable monitor mode, DKMS, dashboard, tested in CI.">
+<meta name="theme-color" content="#0b1220">
+<link rel="canonical" href="https://wimlee115.github.io/rtl8852au-build/">
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="rtl8852au-build">
+<meta property="og:title" content="rtl8852au-build — Linux WiFi 6 driver for Realtek RTL8852AU / RTL8832AU">
+<meta property="og:description" content="An out-of-tree Realtek RTL8852AU/8832AU driver that actually builds on kernel 6.1 → 7.0+. Stable monitor mode, DKMS, a loopback dashboard, and a live test suite.">
+<meta property="og:url" content="https://wimlee115.github.io/rtl8852au-build/">
+<meta property="og:image" content="https://wimlee115.github.io/rtl8852au-build/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="rtl8852au-build — Linux WiFi 6 driver for RTL8852AU / RTL8832AU">
+<meta name="twitter:description" content="A Realtek RTL8852AU/8832AU USB WiFi 6 driver that builds on kernel 6.1 → 7.0+. Stable monitor mode, DKMS, dashboard, CI-tested.">
+<meta name="twitter:image" content="https://wimlee115.github.io/rtl8852au-build/og-image.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M8 19a11 11 0 0 1 16 0'/%3E%3Cpath d='M11.5 16a6.5 6.5 0 0 1 9 0'/%3E%3C/g%3E%3Ccircle cx='16' cy='22' r='2.4' fill='%23f5b953'/%3E%3C/svg%3E">
+<style>
+  /* ─── Tokens ──────────────────────────────────────────────────────────
+     Palette is picked, not defaulted: a blue-slate ground (spectrum-analyzer
+     screen), a cyan "signal" accent with indigo depth, amber as a second hue
+     for the machine's live/attention state. Neutrals are biased toward blue. */
+  :root {
+    color-scheme: light dark;
+    --ground:    #f5f8fd;
+    --surface:   #ffffff;
+    --surface-2: #eef3fb;
+    --ink:       #0b1220;
+    --ink-soft:  #26324c;
+    --muted:     #4a5a78;
+    --line:      rgba(11,18,32,.12);
+    --line-2:    rgba(11,18,32,.07);
+    --signal:    #0369a1;
+    --signal-2:  #4f46e5;
+    --amber:     #b45309;
+    --good:      #0f766e;
+    --hero-a:    #0b1220;
+    --hero-b:    #14213c;
+    --hero-ink:  #eaf1ff;
+    --hero-muted:#9fb0d0;
+    --shadow:    0 1px 0 rgba(11,18,32,.04), 0 12px 30px -18px rgba(11,18,32,.28);
+    --radius:    10px;
+    --radius-sm: 6px;
+    --maxw:      1080px;
+    --font-display: "Inter var", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-body:    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono:    ui-monospace, "JetBrains Mono", "SF Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:    #0b1220;
+      --surface:   #111a2e;
+      --surface-2: #16223c;
+      --ink:       #e8eefc;
+      --ink-soft:  #c7d3ec;
+      --muted:     #93a3c4;
+      --line:      rgba(147,163,196,.18);
+      --line-2:    rgba(147,163,196,.10);
+      --signal:    #38bdf8;
+      --signal-2:  #7c83f7;
+      --amber:     #f5b953;
+      --good:      #34d399;
+      --shadow:    0 1px 0 rgba(0,0,0,.3), 0 20px 44px -24px rgba(0,0,0,.7);
+    }
+  }
+  /* Explicit toggle wins over the OS media query, in both directions. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --ground:#f5f8fd; --surface:#ffffff; --surface-2:#eef3fb;
+    --ink:#0b1220; --ink-soft:#26324c; --muted:#4a5a78;
+    --line:rgba(11,18,32,.12); --line-2:rgba(11,18,32,.07);
+    --signal:#0369a1; --signal-2:#4f46e5; --amber:#b45309; --good:#0f766e;
+    --shadow:0 1px 0 rgba(11,18,32,.04), 0 12px 30px -18px rgba(11,18,32,.28);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:#0b1220; --surface:#111a2e; --surface-2:#16223c;
+    --ink:#e8eefc; --ink-soft:#c7d3ec; --muted:#93a3c4;
+    --line:rgba(147,163,196,.18); --line-2:rgba(147,163,196,.10);
+    --signal:#38bdf8; --signal-2:#7c83f7; --amber:#f5b953; --good:#34d399;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 20px 44px -24px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a { color: var(--signal); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 3px; }
+  h1, h2, h3 { text-wrap: balance; line-height: 1.12; letter-spacing: -0.02em; font-family: var(--font-display); }
+  code, kbd, samp { font-family: var(--font-mono); }
+  .wrap { max-width: var(--maxw); margin-inline: auto; padding-inline: 22px; }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: .74rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--signal);
+    margin: 0 0 14px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .eyebrow::before {
+    content: ""; width: 26px; height: 1px;
+    background: linear-gradient(90deg, var(--signal), transparent);
+  }
+
+  /* ─── Header ──────────────────────────────────────────────────────── */
+  header.site {
+    position: sticky; top: 0; z-index: 40;
+    backdrop-filter: saturate(160%) blur(10px);
+    background: color-mix(in srgb, var(--ground) 82%, transparent);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .nav { display: flex; align-items: center; gap: 18px; height: 62px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-weight: 600; letter-spacing: -.01em; color: var(--ink); }
+  .brand svg { display: block; }
+  .brand b { color: var(--signal); font-weight: 600; }
+  .nav .spacer { flex: 1; }
+  .nav-links { display: flex; gap: 20px; }
+  .nav-links a { color: var(--muted); font-size: .92rem; font-family: var(--font-mono); letter-spacing: .01em; }
+  .nav-links a:hover { color: var(--ink); text-decoration: none; }
+  .icon-btn {
+    display: inline-grid; place-items: center;
+    width: 38px; height: 38px; border-radius: var(--radius-sm);
+    background: transparent; border: 1px solid var(--line); color: var(--ink);
+    cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--signal); color: var(--signal); }
+  @media (max-width: 720px) { .nav-links { display: none; } }
+
+  /* ─── Buttons ─────────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: var(--font-mono); font-size: .9rem; font-weight: 500;
+    padding: 11px 17px; border-radius: var(--radius-sm);
+    border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .btn:hover { text-decoration: none; transform: translateY(-1px); }
+  .btn-primary { background: var(--signal); color: #04121f; border-color: var(--signal); box-shadow: 0 8px 22px -12px color-mix(in srgb, var(--signal) 90%, transparent); }
+  :root[data-theme="light"] .btn-primary, :root:not([data-theme]) .btn-primary { color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme]) .btn-primary { color: #04121f; } }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+  .btn-ghost:hover { border-color: var(--signal); color: var(--signal); }
+
+  /* ─── Hero ────────────────────────────────────────────────────────── */
+  .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line-2);
+    background:
+      radial-gradient(1200px 500px at 78% -10%, color-mix(in srgb, var(--signal) 22%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--hero-a), var(--hero-b));
+    color: var(--hero-ink);
+  }
+  :root[data-theme="light"] .hero, :root:not([data-theme]) .hero { --hero-a:#0b1220; --hero-b:#14213c; color:#eaf1ff; }
+  #rf { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; }
+  .hero-inner { position: relative; z-index: 2; padding: 92px 0 84px; }
+  .hero .eyebrow { color: color-mix(in srgb, var(--signal) 78%, white); }
+  .hero .eyebrow::before { background: linear-gradient(90deg, color-mix(in srgb, var(--signal) 78%, white), transparent); }
+  h1.title { font-size: clamp(2.5rem, 6vw, 4.35rem); margin: 0 0 18px; font-weight: 800; color: #f4f8ff; }
+  h1.title .hl {
+    background: linear-gradient(100deg, var(--signal), var(--signal-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede { font-size: clamp(1.06rem, 1.9vw, 1.32rem); max-width: 62ch; color: var(--hero-muted); margin: 0 0 30px; line-height: 1.55; }
+  .lede strong { color: #eaf1ff; font-weight: 600; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 26px; }
+
+  /* terminal one-liner */
+  .terminal { max-width: 640px; border: 1px solid rgba(160,180,220,.22); border-radius: var(--radius); overflow: hidden; background: rgba(4,10,22,.55); box-shadow: 0 24px 60px -30px rgba(0,0,0,.8); }
+  .terminal .bar { display: flex; align-items: center; gap: 7px; padding: 9px 13px; border-bottom: 1px solid rgba(160,180,220,.16); }
+  .terminal .bar i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: #35405c; }
+  .terminal .bar i:nth-child(1){ background:#ff5f57; } .terminal .bar i:nth-child(2){ background:#febc2e; } .terminal .bar i:nth-child(3){ background:#28c840; }
+  .terminal .bar span { margin-left: 8px; font-family: var(--font-mono); font-size: .72rem; color: #8194b8; letter-spacing: .08em; }
+  .terminal .body { display: flex; align-items: flex-start; gap: 10px; padding: 15px 15px; }
+  .terminal pre { margin: 0; flex: 1; overflow-x: auto; font-family: var(--font-mono); font-size: .86rem; line-height: 1.7; color: #dce6fb; }
+  .terminal .prompt { color: var(--signal); user-select: none; }
+  .terminal .cmt { color: #6c7ea6; }
+  .copy {
+    flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px;
+    border-radius: var(--radius-sm); border: 1px solid rgba(160,180,220,.22);
+    background: transparent; color: #b9c6e6; cursor: pointer;
+  }
+  .copy:hover { border-color: var(--signal); color: var(--signal); }
+  .copy.done { color: var(--good); border-color: var(--good); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .chip {
+    font-family: var(--font-mono); font-size: .74rem; letter-spacing: .03em;
+    padding: 5px 10px; border-radius: 100px; border: 1px solid rgba(160,180,220,.22);
+    color: #cdd8f2; background: rgba(120,140,190,.08); display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip b { color: var(--signal); font-weight: 600; }
+  .microcopy { margin-top: 22px; font-size: .8rem; color: #7f90b4; max-width: 60ch; }
+
+  /* ─── Section scaffolding ─────────────────────────────────────────── */
+  section { padding: 74px 0; }
+  section + section { border-top: 1px solid var(--line-2); }
+  .sec-head { max-width: 60ch; margin-bottom: 40px; }
+  .sec-head h2 { font-size: clamp(1.7rem, 3.3vw, 2.35rem); margin: 0 0 12px; font-weight: 750; }
+  .sec-head p { color: var(--muted); margin: 0; font-size: 1.04rem; }
+
+  /* why strip */
+  .why { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .why .cell { background: var(--surface); padding: 22px 20px; }
+  .why .n { font-family: var(--font-mono); font-size: 1.85rem; font-weight: 700; color: var(--signal); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .why .k { font-size: .92rem; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 780px) { .why { grid-template-columns: repeat(2, 1fr); } }
+
+  /* feature tiles */
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .tile {
+    position: relative; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 26px 24px; box-shadow: var(--shadow);
+  }
+  .tile .ic { width: 40px; height: 40px; border-radius: 9px; display: grid; place-items: center;
+    background: color-mix(in srgb, var(--signal) 14%, transparent); color: var(--signal); margin-bottom: 16px; }
+  .tile h3 { font-size: 1.18rem; margin: 0 0 9px; font-weight: 650; letter-spacing: -.01em; }
+  .tile p { margin: 0; color: var(--muted); font-size: .97rem; }
+  .tile .tag { display: inline-block; margin-top: 14px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; color: var(--ink-soft); border-top: 1px dashed var(--line); padding-top: 12px; }
+  .tile .tag b { color: var(--signal); }
+
+  /* hardware table */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; background: var(--surface); }
+  thead th { text-align: left; font-family: var(--font-mono); font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); position: sticky; top: 0; }
+  tbody td { padding: 12px 16px; border-bottom: 1px solid var(--line-2); font-size: .94rem; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: color-mix(in srgb, var(--signal) 5%, transparent); }
+  td.id { font-family: var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .03em; padding: 3px 9px; border-radius: 100px; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .pill.tested { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .pill.tested::before { background: var(--good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--good) 22%, transparent); }
+  .pill.reco { color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+  .pill.reco::before { background: var(--muted); }
+  .note { margin-top: 16px; font-size: .9rem; color: var(--muted); }
+  .note b { color: var(--good); } .note i { color: var(--muted); font-style: normal; font-weight: 600; }
+
+  /* quickstart */
+  .qs { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .qs { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+  .card > header h3 { margin: 0; font-size: 1.02rem; font-weight: 650; }
+  .card > header .lbl { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .code { position: relative; }
+  .code pre { margin: 0; padding: 18px; overflow-x: auto; font-family: var(--font-mono); font-size: .86rem; line-height: 1.75; color: var(--ink-soft); }
+  .code .prompt { color: var(--signal); } .code .cmt { color: var(--muted); }
+  .code .copy { position: absolute; top: 11px; right: 11px; background: var(--surface); }
+  .verify { margin-top: 18px; }
+
+  /* faq */
+  .faq { display: grid; gap: 12px; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  details[open] { border-color: color-mix(in srgb, var(--signal) 40%, var(--line)); }
+  summary { cursor: pointer; padding: 17px 20px; font-weight: 600; font-size: 1.02rem; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  summary::-webkit-details-marker { display: none; }
+  summary .mk { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; color: var(--signal); transition: transform .2s ease; font-family: var(--font-mono); }
+  details[open] summary .mk { transform: rotate(45deg); }
+  details .ans { padding: 0 20px 20px; color: var(--muted); }
+  details .ans code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: .86em; color: var(--ink-soft); }
+  details .ans a { font-weight: 500; }
+
+  /* CTA band */
+  .band { background: linear-gradient(120deg, var(--hero-a), var(--hero-b)); color: #eaf1ff; border-radius: var(--radius); padding: 44px 40px; text-align: center; position: relative; overflow: hidden; border: 1px solid var(--line); }
+  .band h2 { color: #f4f8ff; font-size: clamp(1.6rem, 3vw, 2.2rem); margin: 0 0 10px; }
+  .band p { color: var(--hero-muted); max-width: 54ch; margin: 0 auto 24px; }
+  .band .hero-cta { justify-content: center; }
+
+  /* footer */
+  footer.site { border-top: 1px solid var(--line-2); padding: 48px 0 60px; color: var(--muted); font-size: .9rem; }
+  footer .cols { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+  @media (max-width: 720px) { footer .cols { grid-template-columns: 1fr; gap: 22px; } }
+  footer h4 { font-family: var(--font-mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 12px; }
+  footer ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  footer .disclaimer { font-size: .82rem; line-height: 1.6; border-top: 1px solid var(--line-2); padding-top: 22px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="rtl8852au-build home">
+      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+        <g fill="none" stroke="var(--signal)" stroke-width="2.3" stroke-linecap="round">
+          <path d="M7 20a12 12 0 0 1 18 0"/><path d="M11 17a7 7 0 0 1 10 0"/>
+        </g><circle cx="16" cy="23" r="2.6" fill="var(--amber)"/>
+      </svg>
+      rtl8852au<b>-build</b>
+    </a>
+    <div class="spacer"></div>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#why">Why</a>
+      <a href="#features">Features</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <a class="btn btn-ghost" href="https://github.com/WimLee115/rtl8852au-build" style="padding:8px 13px">
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      GitHub
+    </a>
+    <button class="icon-btn" id="theme" type="button" aria-label="Toggle colour theme" title="Toggle theme">
+      <svg id="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+    </button>
+  </div>
+</header>
+
+<a id="top"></a>
+<section class="hero" aria-labelledby="hero-title">
+  <canvas id="rf" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <p class="eyebrow">Realtek RTL8852AU · RTL8832AU · 802.11ax</p>
+    <h1 class="title" id="hero-title">The WiFi&nbsp;6 driver that<br><span class="hl">actually builds</span> on modern kernels.</h1>
+    <p class="lede">An out-of-tree Linux driver for USB adapters based on the Realtek <strong>RTL8852AU / RTL8832AU</strong> (WiFi&nbsp;6, AX1800) chipsets. The vendor source stopped compiling on recent kernels — this fork carries the version-gated patches that restore the build on <strong>kernel 6.1&nbsp;→&nbsp;7.0+</strong>, and fixes the monitor-mode crashes along the way.</p>
+
+    <div class="hero-cta">
+      <a class="btn btn-primary" href="#install">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        Get started
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/WimLee115/rtl8852au-build">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 17.27 5.18 3.13-1.37-5.9 4.59-3.97-6.04-.51L12 4.5 9.64 10.02l-6.04.51 4.59 3.97-1.37 5.9z"/></svg>
+        Star on GitHub
+      </a>
+    </div>
+
+    <div class="terminal" aria-label="Install one-liner">
+      <div class="bar"><i></i><i></i><i></i><span>bash — install</span></div>
+      <div class="body">
+        <pre id="oneliner"><span class="prompt">$</span> git clone https://github.com/WimLee115/rtl8852au-build
+<span class="prompt">$</span> cd rtl8852au-build && make -j"$(nproc)"
+<span class="prompt">$</span> sudo make install && sudo modprobe 8852au</pre>
+        <button class="copy" type="button" data-copy="git clone https://github.com/WimLee115/rtl8852au-build&#10;cd rtl8852au-build && make -j&quot;$(nproc)&quot;&#10;sudo make install && sudo modprobe 8852au" aria-label="Copy install commands">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><b>kernel</b> 6.1&nbsp;→&nbsp;7.0+</span>
+      <span class="chip"><b>license</b> GPL-2.0</span>
+      <span class="chip"><b>DKMS</b> supported</span>
+      <span class="chip"><b>monitor</b> stable</span>
+      <span class="chip"><b>docs</b> EN / NL</span>
+    </div>
+    <p class="microcopy">Independent community fork. Not affiliated with, endorsed by, or sponsored by Realtek Semiconductor Corp. or any hardware vendor named here. Kernel 7.1 is not yet supported — a tracked, in-progress port.</p>
+  </div>
+</section>
+
+<!-- WHY -->
+<section id="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Why this fork</p>
+      <h2>The vendor driver builds once, then rots at the next kernel bump. This one is maintained against it.</h2>
+      <p>Every claim below maps to a commit, a patch file in <code>patches/</code>, or a CI job — not marketing.</p>
+    </div>
+    <div class="why">
+      <div class="cell"><div class="n">12</div><div class="k">version-gated kernel 6.17+ compatibility patches</div></div>
+      <div class="cell"><div class="n">4</div><div class="k">monitor-mode RX-path crash fixes (UAF, race, OOB, NULL-deref)</div></div>
+      <div class="cell"><div class="n">14</div><div class="k">supported USB IDs across TP-Link, ASUS, D-Link, Buffalo, Elecom</div></div>
+      <div class="cell"><div class="n">4×</div><div class="k">CI kernels: two distro + mainline stable &amp; longterm</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">What you get</p>
+      <h2>Built to keep working, not just to compile today.</h2>
+      <p>The scope is deliberately narrow — build reliability, stable monitor mode, and staying close to the vendor source — with the tooling to prove it.</p>
+    </div>
+    <div class="grid">
+
+      <article class="tile">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg></div>
+        <h3>Kernel 6.1 → 7.0+ compatibility</h3>
+        <p>Twelve compile-time fixes for the API removals and signature changes that broke the vendor tree — WEXT removal, <code>proc_ops</code>, <code>timer_setup</code>, the DMA API, <code>class_create</code>, and the cfg80211 channel-switch / MLO <code>radio_idx</code> refactor. Each gate keys off <code>LINUX_VERSION_CODE</code>.</p>
+        <span class="tag">Verified up to <b>Linux 7.0.12</b> · CI builds mainline stable + LTS</span>
+      </article>
+
+      <article class="tile">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><path d="M6.5 12a5.5 5.5 0 0 1 11 0"/><circle cx="12" cy="12.5" r="2"/><path d="M12 14.5V21"/></svg></div>
+        <h3>Monitor mode that stays up</h3>
+        <p>The vendor RX path crashed under monitor mode in four distinct ways: a UBSAN array out-of-bounds on every WPA key op, a NULL-deref, an SKB use-after-free, and a race with a double-free. All four are fixed. A separate patch takes <code>hw_init_mutex</code> symmetrically so <code>rmmod</code>-while-associated no longer panics.</p>
+        <span class="tag">rmmod-under-load fix <b>hardware-validated</b> on TX20U Plus</span>
+      </article>
+
+      <article class="tile">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M3 9h18M8 21h8M12 17v4"/></svg></div>
+        <h3>Web dashboard</h3>
+        <p>A small Flask app for the driver's runtime state and a few controls — scan, connect, MTU, txpower, module reload. Binds to <code>127.0.0.1</code> by default and gates every endpoint behind HTTP Basic Auth with a per-host token stored <code>0600</code>. SSID/passphrase inputs are validated against conf-injection.</p>
+        <span class="tag">Loopback-only · <b>per-host auth token</b> · host-header allowlist</span>
+      </article>
+
+      <article class="tile">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg></div>
+        <h3>Test suite &amp; CI</h3>
+        <p>A Python <code>unittest</code> suite that exercises the module, USB binding, interface up/down, scan, cfg80211 and dmesg against the running kernel and a live adapter — writing a JSON report. Destructive reload/stability classes are opt-in and refuse to run near an active association. CI adds DKMS dry-run, shellcheck and hash-locked Python deps.</p>
+        <span class="tag">10 test classes · <b>full DKMS</b> install/remove verified in CI</span>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- HARDWARE -->
+<section id="hardware">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Compatibility</p>
+      <h2>Supported devices</h2>
+      <p>Generated from <code>os_dep/linux/usb_intf.c</code>. Any USB adapter built on the RTL8852AU or RTL8832AU chipset should bind — confirm yours with <code>lsusb</code>.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>USB ID</th><th>Device</th><th>Chipset</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td class="id">2357:013f</td><td>TP-Link Archer TX20U Plus</td><td>RTL8852AU</td><td><span class="pill tested">Tested</span></td></tr>
+          <tr><td class="id">3625:010f</td><td>TP-Link Archer TX35U Plus</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0bda:8832</td><td>Realtek reference board</td><td>RTL8832AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0bda:885a</td><td>Realtek reference board</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0bda:885c</td><td>Realtek reference board</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0b05:1997</td><td>ASUS USB-AX56 (variant)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0b05:1a62</td><td>ASUS USB-AX56 (no cradle)</td><td>RTL8832AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0411:0312</td><td>Buffalo WI-U3-1200AX2(/N)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">2001:0141</td><td>D-Link DWA-X1850</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">2001:3321</td><td>D-Link DWA-X1850 (variant)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">35bc:0100</td><td>TP-Link AX1800 (generic)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">2357:0140</td><td>TP-Link AX1800 (variant)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">2357:0141</td><td>TP-Link AX1800 (variant)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">056e:4020</td><td>Elecom WDC-X1201DU3</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><b>Tested</b> = maintainer verified bind, association and traffic on that device. <i>Recognised</i> = the USB ID is in the driver and the chipset matches, but a full end-to-end check is pending. Have one of the Recognised adapters working? <a href="https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml">Send an <code>lsusb -v</code> report</a> and it moves to Tested.</p>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">Quickstart</p>
+      <h2>Two ways to install</h2>
+      <p>Plain <code>make</code> for a one-off build, or DKMS so the module is rebuilt automatically on every kernel upgrade. Both need the matching kernel headers.</p>
+    </div>
+    <div class="qs">
+      <div class="card">
+        <header><h3>Plain make</h3><span class="lbl">one-off</span></header>
+        <div class="code">
+          <button class="copy" type="button" data-copy="sudo apt install -y build-essential dkms linux-headers-$(uname -r) git&#10;git clone https://github.com/WimLee115/rtl8852au-build&#10;cd rtl8852au-build&#10;make -j&quot;$(nproc)&quot;&#10;sudo make install&#10;sudo modprobe 8852au" aria-label="Copy make install commands"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+<pre><span class="cmt"># dependencies</span>
+<span class="prompt">$</span> sudo apt install -y build-essential dkms \
+       linux-headers-$(uname -r) git
+<span class="prompt">$</span> git clone https://github.com/WimLee115/rtl8852au-build
+<span class="prompt">$</span> cd rtl8852au-build
+<span class="prompt">$</span> make -j"$(nproc)"
+<span class="prompt">$</span> sudo make install
+<span class="prompt">$</span> sudo modprobe 8852au</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <header><h3>DKMS</h3><span class="lbl">survives kernel upgrades</span></header>
+        <div class="code">
+          <button class="copy" type="button" data-copy="sudo apt install -y build-essential dkms linux-headers-$(uname -r) git&#10;git clone https://github.com/WimLee115/rtl8852au-build&#10;cd rtl8852au-build&#10;sudo ./dkms-install.sh" aria-label="Copy DKMS install commands"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+<pre><span class="cmt"># same deps, then:</span>
+<span class="prompt">$</span> git clone https://github.com/WimLee115/rtl8852au-build
+<span class="prompt">$</span> cd rtl8852au-build
+<span class="prompt">$</span> sudo ./dkms-install.sh
+
+<span class="cmt"># reads dkms.conf, registers, builds,</span>
+<span class="cmt"># installs and modprobes for you.</span>
+<span class="cmt"># uninstall:</span>
+<span class="prompt">$</span> sudo ./dkms-remove.sh</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="card verify">
+      <header><h3>Verify it loaded</h3><span class="lbl">check</span></header>
+      <div class="code">
+        <button class="copy" type="button" data-copy="lsmod | grep 8852au&#10;ip link | grep wlan&#10;dmesg | grep -iE '8852|rtw'" aria-label="Copy verify commands"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button>
+<pre><span class="prompt">$</span> lsmod | grep 8852au
+<span class="prompt">$</span> ip link | grep wlan
+<span class="prompt">$</span> dmesg | grep -iE "8852|rtw"</pre>
+      </div>
+    </div>
+    <p class="note">No <code>wlan*</code> after <code>modprobe</code>? Unplug and replug the adapter so the USB subsystem rebinds. Full walkthrough in the <a href="https://github.com/WimLee115/rtl8852au-build/blob/main/README.md">README</a>.</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="eyebrow">FAQ</p>
+      <h2>Common questions</h2>
+    </div>
+    <div class="faq">
+      <details>
+        <summary>Which adapters does this support? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">Any USB adapter built on the Realtek <b>RTL8852AU</b> or <b>RTL8832AU</b> chipset — WiFi 6, typically marketed as AX1800. Run <code>lsusb</code> and match the vendor:product ID against the <a href="#hardware">supported-devices table</a>. If your ID isn't listed but <code>lsusb -v</code> shows one of these chipsets, <a href="https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml">open a hardware request</a>.</div>
+      </details>
+      <details>
+        <summary>Does monitor mode work? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">Yes — that's the fork's main focus after build reliability. The vendor RX path had four separate monitor-mode crashes (a UBSAN out-of-bounds, a NULL-deref, an SKB use-after-free and a race/double-free); all four are patched. Switch with <code>iw dev wlanX set type monitor</code> after bringing the interface down. If NetworkManager fights you, mark the interface unmanaged.</div>
+      </details>
+      <details>
+        <summary>What kernel versions are supported? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">Kernels <b>6.1 (LTS) through 7.0</b> build cleanly; every patch is gated on <code>LINUX_VERSION_CODE</code>, and CI compiles against distro kernels plus the newest mainline stable and longterm releases. <b>Kernel 7.1 is not yet supported</b> — it refactored a large set of <code>cfg80211_ops</code> callbacks from <code>net_device</code> to <code>wireless_dev</code>; a version-gated port is tracked as follow-up work.</div>
+      </details>
+      <details>
+        <summary>Secure Boot rejects the module — now what? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">Sign the built module with your Machine Owner Key using the kernel's <code>scripts/sign-file</code> against <code>MOK.priv</code>/<code>MOK.der</code>, or enrol a MOK first with <code>mokutil --import</code>, reboot to complete the prompt, then re-sign. Step-by-step in the <a href="https://github.com/WimLee115/rtl8852au-build/blob/main/README.md">README troubleshooting</a>.</div>
+      </details>
+      <details>
+        <summary>Does it rebuild automatically after a kernel upgrade? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">Yes, if you install via DKMS (<code>sudo ./dkms-install.sh</code>). DKMS registers the source under <code>/usr/src</code> and rebuilds the module whenever new kernel headers land — no manual recompile after <code>apt upgrade</code>.</div>
+      </details>
+      <details>
+        <summary>Is this affiliated with Realtek or TP-Link? <span class="mk" aria-hidden="true">+</span></summary>
+        <div class="ans">No. It's an independent community fork of Realtek's GPL-2.0 vendor source (<code>v1.15.0.1-2</code>), not affiliated with, endorsed by, or sponsored by Realtek, TP-Link, ASUS, D-Link, Buffalo, Elecom or any other vendor named here. Product names and USB IDs are listed for identification only. The redistributed firmware blob is unchanged from the vendor bundle and checksum-verified in CI.</div>
+      </details>
+    </div>
+
+    <div class="band" style="margin-top:46px">
+      <h2>Get the adapter working — then star the repo.</h2>
+      <p>A star is the single biggest signal that keeps this fork maintained, and helps the next person with the same dongle find a driver that builds. Free, one click.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="https://github.com/WimLee115/rtl8852au-build">⭐ Star on GitHub</a>
+        <a class="btn btn-ghost" href="https://github.com/WimLee115/rtl8852au-build/releases/latest" style="color:#eaf1ff;border-color:rgba(160,180,220,.3)">Download latest release</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <h4>rtl8852au-build</h4>
+        <p style="margin:0 0 12px">Out-of-tree Linux driver for Realtek RTL8852AU / RTL8832AU USB WiFi 6 adapters. Maintained against current kernels so the vendor source keeps building.</p>
+        <p style="margin:0"><a href="https://github.com/WimLee115/rtl8852au-build">github.com/WimLee115/rtl8852au-build</a></p>
+      </div>
+      <div>
+        <h4>Docs</h4>
+        <ul>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/README.md">README</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/docs/dashboard.md">Dashboard guide</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/docs/architecture.md">Architecture</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/CHANGELOG.md">Changelog</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/releases">Releases</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml">Hardware request</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/CONTRIBUTING.md">Contributing</a></li>
+          <li><a href="https://github.com/WimLee115/rtl8852au-build/blob/main/SECURITY.md">Security policy</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="disclaimer">
+      <strong>Disclaimer.</strong> Independent community fork — not affiliated with, endorsed by, or sponsored by Realtek Semiconductor Corp., TP-Link, ASUSTeK, D-Link, Buffalo, Elecom, or any other hardware vendor named here; product names and USB IDs are for identification only. The firmware blob is © Realtek and redistributed unchanged from the <code>v1.15.0.1-2</code> vendor source, checksum-verified in CI. Released under the <a href="https://github.com/WimLee115/rtl8852au-build/blob/main/LICENSE">GNU GPL-2.0</a>; provided “AS IS” without warranty of any kind.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Theme toggle: stamp data-theme, overriding the OS media query ── */
+  var root = document.documentElement;
+  var btn = document.getElementById("theme");
+  function stored() { try { return localStorage.getItem("rtl-theme"); } catch (e) { return null; } }
+  function systemDark() { return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; }
+  function apply(t) {
+    root.setAttribute("data-theme", t);
+    root.querySelector("meta[name=theme-color]");
+    var m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute("content", t === "dark" ? "#0b1220" : "#f5f8fd");
+  }
+  var initial = stored() || (systemDark() ? "dark" : "light");
+  apply(initial);
+  if (btn) btn.addEventListener("click", function () {
+    var next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    apply(next);
+    try { localStorage.setItem("rtl-theme", next); } catch (e) {}
+  });
+
+  /* ── Copy buttons ── */
+  document.querySelectorAll(".copy").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = (b.getAttribute("data-copy") || "").replace(/&#10;/g, "\n");
+      var done = function () {
+        b.classList.add("done");
+        var svg = b.innerHTML;
+        b.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+        setTimeout(function () { b.classList.remove("done"); b.innerHTML = svg; }, 1400);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); done();
+      }
+    });
+  });
+
+  /* ── Hero: ambient RF signal field on canvas ──
+     The subject's most characteristic image — an adapter broadcasting.
+     Concentric emitter rings expand and fade; a faint spectrum baseline
+     drifts underneath. Static single frame when reduced-motion is set. */
+  var cv = document.getElementById("rf");
+  if (cv && cv.getContext) {
+    var ctx = cv.getContext("2d");
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var W = 0, H = 0, DPR = 1, t0 = null, raf = null;
+    function accent() {
+      var c = getComputedStyle(root).getPropertyValue("--signal").trim();
+      return c || "#38bdf8";
+    }
+    function resize() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      var r = cv.getBoundingClientRect();
+      W = r.width; H = r.height;
+      cv.width = Math.max(1, W * DPR); cv.height = Math.max(1, H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    }
+    function hexToRgb(h) {
+      h = h.replace("#", "");
+      if (h.length === 3) h = h.split("").map(function (x) { return x + x; }).join("");
+      var n = parseInt(h, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function draw(ts, elapsed) {
+      var col = hexToRgb(accent());
+      ctx.clearRect(0, 0, W, H);
+      // emitter positioned upper-right, off the text column
+      var ex = W * 0.80, ey = H * 0.30;
+      var maxR = Math.hypot(Math.max(ex, W - ex), Math.max(ey, H - ey)) * 1.05;
+      // node glow
+      var g = ctx.createRadialGradient(ex, ey, 0, ex, ey, 26);
+      g.addColorStop(0, "rgba(" + col[0] + "," + col[1] + "," + col[2] + ",0.9)");
+      g.addColorStop(1, "rgba(" + col[0] + "," + col[1] + "," + col[2] + ",0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(ex, ey, 26, 0, Math.PI * 2); ctx.fill();
+      // expanding rings
+      var rings = 6, period = 6200;
+      for (var i = 0; i < rings; i++) {
+        var phase = ((elapsed / period) + i / rings) % 1;
+        var r = phase * maxR;
+        var a = Math.pow(1 - phase, 1.7) * 0.5;
+        if (a <= 0.01) continue;
+        ctx.beginPath();
+        ctx.arc(ex, ey, r, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(" + col[0] + "," + col[1] + "," + col[2] + "," + a.toFixed(3) + ")";
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+      }
+      // faint spectrum baseline drifting along the bottom
+      ctx.beginPath();
+      var baseY = H * 0.9;
+      for (var x = 0; x <= W; x += 6) {
+        var y = baseY
+          + Math.sin(x * 0.012 + elapsed * 0.0011) * 10
+          + Math.sin(x * 0.03 - elapsed * 0.0016) * 5;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = "rgba(" + col[0] + "," + col[1] + "," + col[2] + ",0.16)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    function frame(ts) {
+      if (t0 === null) t0 = ts;
+      draw(ts, ts - t0);
+      raf = requestAnimationFrame(frame);
+    }
+    function start() {
+      resize();
+      if (reduce) { draw(0, 1600); return; }
+      cancelAnimationFrame(raf);
+      t0 = null; raf = requestAnimationFrame(frame);
+    }
+    var rt;
+    window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(start, 150); });
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { cancelAnimationFrame(raf); }
+      else if (!reduce) { t0 = null; raf = requestAnimationFrame(frame); }
+    });
+    start();
+  }
+})();
+</script>
+</body>
+</html>

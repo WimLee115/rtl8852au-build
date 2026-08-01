@@ -3,8 +3,14 @@
 [English](README.md) | **Nederlands**
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
-[![Licentie: GPL-2.0](https://img.shields.io/badge/licentie-GPL--2.0-blue.svg)](LICENSE)
+[![Nieuwste release](https://img.shields.io/github/v/release/WimLee115/rtl8852au-build?sort=semver&label=release&color=0a7ea4)](https://github.com/WimLee115/rtl8852au-build/releases/latest)
 [![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0%2B-informational.svg)](#compatibiliteit)
+[![Licentie: GPL-2.0](https://img.shields.io/badge/licentie-GPL--2.0-blue.svg)](LICENSE)
+[![DKMS](https://img.shields.io/badge/DKMS-ondersteund-brightgreen.svg)](#dkms-installatie)
+[![WiFi 6](https://img.shields.io/badge/WiFi%206-AX1800-0a7ea4.svg)](#ondersteunde-apparaten)
+[![Sterren](https://img.shields.io/github/stars/WimLee115/rtl8852au-build?style=flat&color=f5b953)](https://github.com/WimLee115/rtl8852au-build/stargazers)
+
+**📡 Website & documentatie: <https://wimlee115.github.io/rtl8852au-build/>**
 
 Out-of-tree Linux-driver voor USB-WiFi-adapters gebaseerd op de Realtek
 **RTL8852AU**- en **RTL8832AU**-chipsets (WiFi 6, AX1800). De upstream
@@ -17,6 +23,29 @@ De scope van de fork is bewust beperkt: zorg dat de driver blijft
 bouwen, hou monitor-mode betrouwbaar en blijf dicht bij de
 vendor-broncode zodat upstream-wijzigingen later opnieuw toegepast
 kunnen worden.
+
+### Waarom deze fork?
+
+- **Hij bouwt op actuele kernels.** Twaalf versie-gegate
+  compatibiliteitspatches dragen de vendor-broncode over de 6.17+
+  API-verwijderingen; CI compileert tegen distro-kernels én de nieuwste
+  kernel.org stable- en longterm-releases, zodat breuk na 6.18 wordt
+  opgevangen vóór jij hem tegenkomt. Geverifieerd tot **Linux 7.0**.
+- **Monitor-mode die overeind blijft.** Vier aparte fixes voor de
+  RX-path-crashes die de vendor-driver teisterden — UBSAN
+  out-of-bounds, een NULL-deref, een SKB use-after-free en een
+  race/double-free — plus een op hardware gevalideerde fix voor de
+  `rmmod`-tijdens-verbonden kernel-panic.
+- **Alles inbegrepen.** Idempotente DKMS-installatie, een
+  loopback-only Flask-dashboard met per-host-authenticatie, een
+  `unittest`-suite die de live-adapter test, hash-locked Python-deps,
+  firmware-blob-checksums en tweetalige (EN/NL) documentatie.
+- **Dicht bij upstream.** Eén logische wijziging per commit,
+  vendor-codestijl behouden, elke post-baseline-fix geëxporteerd als
+  losse `git format-patch` in [`patches/`](patches/) zodat hij opnieuw
+  toegepast of upstream aangeleverd kan worden.
+
+> **⭐ Nuttig gevonden? [Geef de repo een ster](https://github.com/WimLee115/rtl8852au-build)** — dat is het sterkste signaal dat de fork onderhouden houdt, en helpt anderen met dezelfde adapter een driver te vinden die daadwerkelijk bouwt. Werkt je hardware? [Open een hardware-melding](https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml) zodat je apparaat van *Herkend* naar *Getest* kan.
 
 ---
 
