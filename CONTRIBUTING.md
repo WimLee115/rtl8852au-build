@@ -74,6 +74,6 @@ substantial contributions are also listed in
 
 ## Release process
 
-The maintainer tags releases as `v<vendor-version>+<fork-count>` (for
-example `v1.15.0.1+7`). The CI builds artefacts; once green, a GitHub
+The maintainer tags releases as SemVer `vMAJOR.MINOR.PATCH` (for
+example `v1.16.0`). The CI builds artefacts; once green, a GitHub
 release is cut with the changelog entry copy-pasted from `CHANGELOG.md`.

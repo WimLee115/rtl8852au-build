@@ -102,7 +102,7 @@ sequenceDiagram
     CI-->>Dev: alle checks groen
     Dev->>Patches: git format-patch -1 -> patches/00NN-*.patch
     Patches->>Source: blijft in sync met tree
-    Dev->>Source: tag v1.15.0.1+N (geannoteerd)
+    Dev->>Source: tag vX.Y.Z SemVer (geannoteerd)
 ```
 
 ## Levensloop van een status-update in het dashboard
