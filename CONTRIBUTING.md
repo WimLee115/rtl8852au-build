@@ -60,6 +60,10 @@ In the PR description, include:
    succeeds on at least one current kernel (6.12 LTS or newer).
 4. Open a PR. CI will build on Ubuntu 22.04 + 24.04 and run lint.
 
+Once your PR is merged you appear in the GitHub contributors graph;
+substantial contributions are also listed in
+[`CONTRIBUTORS.md`](CONTRIBUTORS.md).
+
 ### Style
 
 - Driver source: match Realtek's vendor style (tabs, K&R braces, no

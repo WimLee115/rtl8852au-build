@@ -64,6 +64,10 @@ Voeg in de PR-beschrijving toe:
    `make` op minstens één recente kernel slaagt (6.12 LTS of nieuwer).
 4. Open een PR. CI bouwt op Ubuntu 22.04 + 24.04 en draait lint.
 
+Zodra je PR gemerged is, verschijn je automatisch in de
+GitHub-contributors-grafiek; substantiële bijdragen worden bovendien
+vermeld in [`CONTRIBUTORS.nl.md`](CONTRIBUTORS.nl.md).
+
 ### Stijl
 
 - Driver-source: volg Realtek's vendor-stijl (tabs, K&R-braces, geen
