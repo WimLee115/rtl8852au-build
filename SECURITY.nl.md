@@ -23,6 +23,10 @@ Binnen 7 dagen volgt een eerste reactie. De ernst wordt beoordeeld
 tegen de [CVSS 3.1](https://www.first.org/cvss/calculator/3.1)
 calculator.
 
+Melders van geldige problemen worden gecrediteerd in
+[`CONTRIBUTORS.nl.md`](CONTRIBUTORS.nl.md), tenzij ze anoniem willen
+blijven.
+
 ## Scope
 
 In scope:
