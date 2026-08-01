@@ -20,6 +20,9 @@ Include:
 A first response will follow within 7 days. Severity is assessed against
 the [CVSS 3.1](https://www.first.org/cvss/calculator/3.1) calculator.
 
+Reporters of valid issues are credited in
+[`CONTRIBUTORS.md`](CONTRIBUTORS.md) unless they ask to stay anonymous.
+
 ## Scope
 
 In scope:
