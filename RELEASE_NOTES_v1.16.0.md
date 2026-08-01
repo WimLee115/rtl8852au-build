@@ -40,7 +40,7 @@ Full instructions, troubleshooting, and the dashboard/test-suite guides are in t
 
 ## Supported devices
 
-RTL8852AU / RTL8832AU USB adapters — 14 USB IDs across TP-Link, ASUS, D-Link, Buffalo, Elecom and the Realtek reference boards. Full table: [supported devices](https://github.com/WimLee115/rtl8852au-build/blob/main/README.md#supported-devices). Have one working that's only *Recognised*? [Send an `lsusb -v` report](https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml) and it moves to *Tested*.
+RTL8852AU / RTL8832AU USB adapters — 15 USB IDs across TP-Link, ASUS, D-Link, Buffalo, Elecom and the Realtek reference boards. Full table: [supported devices](https://github.com/WimLee115/rtl8852au-build/blob/main/README.md#supported-devices). Have one working that's only *Recognised*? [Send an `lsusb -v` report](https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml) and it moves to *Tested*.
 
 ## Known limitations
 

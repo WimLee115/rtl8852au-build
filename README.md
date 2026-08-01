@@ -149,6 +149,7 @@ table below is generated from `os_dep/linux/usb_intf.c`.
 | `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Recognised |
 | `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Recognised |
 | `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Recognised |
+| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Recognised |
 | `35bc:0100`  | TP-Link AX1800 (generic)       | RTL8852AU  | Recognised |
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested** |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised |
@@ -393,7 +394,9 @@ driver-source patches. In short:
 - **[morrownr](https://github.com/morrownr)** — USB WiFi adapter
   documentation, USB-ID references, maintenance patterns.
 - **[Joan Sala (`jsiwrk`)](https://github.com/jsiwrk)** — TP-Link
-  Archer TX35U Plus USB ID (PR #3).
+  Archer TX35U Plus USB ID and the kernel 6.8 build fix (PR #3).
+- **[74Thirsty (`gadgetsaavy`)](https://github.com/74Thirsty)** — D-Link
+  DWA-1850 USB ID `2001:332c` and Parrot OS 6/7 testing (PR #14).
 - **[WimLee115](https://github.com/WimLee115)** — fork maintenance,
   kernel-compatibility patches, test suite, dashboard.
 
