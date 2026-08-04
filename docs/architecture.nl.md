@@ -32,7 +32,6 @@ flowchart TB
     subgraph UserSpace ["User-space helpers"]
         DASHBOARD[dashboard/app.py<br/>Flask + SSE]
         TESTS[tests/test_driver.py<br/>+ run_tests.sh]
-        TOOLS[tools/tapo_rtsp_brute.py]
     end
 
     subgraph CI ["GitHub Actions CI"]
@@ -79,7 +78,6 @@ flowchart TB
 | `patches/`                | Losse `git format-patch`-bestanden voor de post-baseline fixes (0001–0008).     |
 | `dashboard/`              | Flask + Server-Sent-Events web-UI. Leest sysfs + `iw` voor live status.         |
 | `tests/`                  | Python `unittest`-suite + `run_tests.sh`-wrapper.                                |
-| `tools/`                  | Losse research-tools (RTSP-credential-finder, etc.).                            |
 | `docs/`                   | Architectuur- en dashboard-handleidingen (deze map).                            |
 | `.github/`                | CI-workflow, dependabot, issue + PR-templates, CODEOWNERS.                      |
 

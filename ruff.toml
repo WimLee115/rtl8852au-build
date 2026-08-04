@@ -23,7 +23,6 @@ ignore = [
 ]
 
 [lint.per-file-ignores]
-"tools/tapo_rtsp_brute.py" = ["F", "E", "B", "C90"]  # CTF tool, intentionally terse
 "tests/__init__.py" = ["F401"]
 
 [lint.mccabe]

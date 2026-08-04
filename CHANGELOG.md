@@ -7,7 +7,11 @@ changes in this file.
 
 ## [Unreleased]
 
-_Nothing yet — changes land here until the next tag is cut._
+### Removed
+- `tools/tapo_rtsp_brute.py` and the whole `tools/` directory. The RTSP
+  credential brute-forcer was unrelated to the WiFi driver and out of scope
+  for this repository; its CI compile-check, its ruff per-file ignore and its
+  entry in the architecture docs are removed along with it.
 
 ## [1.16.0] — 2026-08-01
 

@@ -394,7 +394,7 @@ vendor-stijl-vereiste voor driver-source-patches. Kort samengevat:
 
 - Eén logische wijziging per commit; vendor-stijl voor `core/`,
   `hal/`, `os_dep/` (tabs, K&R-braces, geen grote herformatteringen).
-- Python (`dashboard/`, `tests/`, `tools/`) moet door `ruff check`
+- Python (`dashboard/`, `tests/`) moet door `ruff check`
   komen met de config in [`ruff.toml`](ruff.toml).
 - Shell moet door `shellcheck` komen.
 - CI moet groen zijn vóór merge; branch-protection op `main` dwingt
