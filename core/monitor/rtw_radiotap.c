@@ -315,6 +315,35 @@ sint rtw_fill_radiotap_hdr(_adapter *padapter,
 	u8 hdr_buf[RTAP_HDR_MAX] = { 0 };
 	u16 rt_len = 8;
 
+	/* This runs in softirq context from the USB RX tasklet, so it cannot
+	 * take hw_init_mutex and may observe an interface teardown already in
+	 * progress on another CPU. netdev_close() calls rtw_hw_iface_deinit(),
+	 * which frees the wifi role and sets padapter->phl_role to NULL, while
+	 * every field read below dereferences it: the band via
+	 * WIFI_ROLE_IS_ON_24G(), the channel and bandwidth via
+	 * rtw_get_oper_ch() and rtw_get_oper_bw(). The netif_running() guard
+	 * in recv_frame_monitor() is evaluated before skb_copy_expand(), so it
+	 * cannot close this window. A NULL deref here faults in interrupt
+	 * context and is therefore a fatal panic, not a recoverable oops.
+	 * Drop the frame instead.
+	 */
+	if (padapter == NULL || padapter->dvobj == NULL
+	    || GET_PHL_COM(padapter->dvobj) == NULL
+	    || padapter->phl_role == NULL) {
+		static bool reported;
+
+		if (!reported) {
+			reported = true;
+			RTW_ERR("%s: dropping monitor frame - padapter=%p dvobj=%p phl_com=%p phl_role=%p\n",
+				 __func__, padapter,
+				 padapter ? padapter->dvobj : NULL,
+				 (padapter && padapter->dvobj) ? GET_PHL_COM(padapter->dvobj) : NULL,
+				 padapter ? padapter->phl_role : NULL);
+		}
+		ret = _FAIL;
+		return ret;
+	}
+
 	/* create header */
 	rtap_hdr = (struct ieee80211_radiotap_header *)&hdr_buf[0];
 	rtap_hdr->it_version = PKTHDR_RADIOTAP_VERSION;

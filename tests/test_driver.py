@@ -22,6 +22,7 @@ Safety:
 import argparse
 import subprocess
 import os
+import shutil
 import sys
 import time
 import re
@@ -503,6 +504,77 @@ class TestStability(unittest.TestCase):
             time.sleep(2)
         rc, out, _ = run(f"iw dev {self.iface} scan dump", timeout=15)
         self.assertEqual(rc, 0, "Scan dump failed after multiple triggers")
+
+    def test_03_monitor_teardown_under_rx_load(self):
+        """Regression: leave monitor mode while the RX path is still live.
+
+        rtw_fill_radiotap_hdr() dereferences padapter->phl_role for the
+        band, channel and bandwidth fields. netdev_close() clears that
+        pointer through rtw_hw_iface_deinit() while the USB RX tasklet can
+        still be inside recv_frame_monitor(): the netif_running() guard
+        there is evaluated before skb_copy_expand(), so it does not cover
+        the radiotap fill that follows. Observed in the field as
+
+            BUG: kernel NULL pointer dereference, address: 0x4e8
+            RIP: rtw_fill_radiotap_hdr+0x1cf [8852au]
+            Kernel panic - not syncing: Fatal exception in interrupt
+
+        after a 300 s airodump-ng capture, where 0x4e8 is chandef.band
+        inside the freed rtw_wifi_role_t. The fault lands in interrupt
+        context, so it is always fatal rather than a recoverable oops.
+
+        This cycles monitor -> managed with frames still arriving and a
+        capture socket still open, which is the ordering that crashed.
+        Surviving the loop is the pass condition.
+        """
+        iface = self.iface
+        sniffer = None
+
+        try:
+            for _ in range(5):
+                run(f"ip link set {iface} down", timeout=10)
+                rc, _, err = run(f"iw dev {iface} set type monitor", timeout=10)
+                self.assertEqual(rc, 0, f"could not enter monitor mode: {err}")
+                run(f"ip link set {iface} up", timeout=10)
+
+                # Park on a busy 2.4 GHz channel so beacons keep the RX
+                # tasklet inside the radiotap path during the teardown.
+                run(f"iw dev {iface} set channel 1", timeout=10)
+
+                if shutil.which("tcpdump"):
+                    sniffer = subprocess.Popen(
+                        ["tcpdump", "-i", iface, "-w", os.devnull, "-U"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                time.sleep(3)
+
+                # Signal the sniffer but do NOT reap it: the packet socket
+                # stays open across netdev_close(), which is exactly the
+                # window the panic needed.
+                if sniffer:
+                    sniffer.terminate()
+
+                run(f"ip link set {iface} down", timeout=10)
+                rc, _, err = run(f"iw dev {iface} set type managed", timeout=10)
+                self.assertEqual(rc, 0, f"could not leave monitor mode: {err}")
+                run(f"ip link set {iface} up", timeout=10)
+                time.sleep(1.5)
+
+                if sniffer:
+                    sniffer.kill()
+                    sniffer.wait(timeout=5)
+                    sniffer = None
+        finally:
+            if sniffer and sniffer.poll() is None:
+                sniffer.kill()
+            run(f"ip link set {iface} down", timeout=10)
+            run(f"iw dev {iface} set type managed", timeout=10)
+            run(f"ip link set {iface} up", timeout=10)
+
+        rc, out, _ = run(f"iw dev {iface} info", timeout=10)
+        self.assertEqual(rc, 0, "Interface broken after monitor teardown cycles")
+        self.assertIn("type managed", out, "Interface did not return to managed")
 
 
 def generate_report(result):
