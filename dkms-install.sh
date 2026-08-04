@@ -55,8 +55,16 @@ fi
 
 echo "==> Installing ${PKG_NAME} ${PKG_VER} via DKMS"
 
-# Remove any stale registration for this name+version (idempotent re-run)
-if dkms status | grep -qE "^${PKG_NAME}/${PKG_VER}"; then
+# Remove any stale registration for this name+version (idempotent re-run).
+#
+# Ask DKMS to filter by name+version directly instead of piping `dkms status`
+# into `grep -q`. That pipeline had two bugs: (1) `grep -q` closes the pipe on
+# its first match, sending SIGPIPE to `dkms status`, which under `set -o
+# pipefail` makes the whole condition fail — so the stale entry silently
+# survived and the later `dkms add` collided with "module/version already in
+# the tree"; (2) PACKAGE_VERSION was used unescaped in a regex, so the dots in
+# 1.15.0.1 matched any character. Filtering server-side sidesteps both.
+if [[ -n "$(dkms status -m "${PKG_NAME}" -v "${PKG_VER}" 2>/dev/null || true)" ]]; then
     echo "==> Removing existing DKMS entry ${PKG_NAME}/${PKG_VER}"
     dkms remove -m "${PKG_NAME}" -v "${PKG_VER}" --all || true
 fi
