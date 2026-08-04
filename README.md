@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/WimLee115/rtl8852au-build?sort=semver&label=release&color=0a7ea4)](https://github.com/WimLee115/rtl8852au-build/releases/latest)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0%2B-informational.svg)](#compatibility)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0-informational.svg)](#compatibility)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 [![DKMS](https://img.shields.io/badge/DKMS-supported-brightgreen.svg)](#dkms-install)
 [![WiFi 6](https://img.shields.io/badge/WiFi%206-AX1800-0a7ea4.svg)](#supported-devices)
@@ -28,8 +28,10 @@ upstream changes can be re-applied later.
 - **It builds on current kernels.** Twelve version-gated compatibility
   patches carry the vendor source across the 6.17+ API removals; CI
   compiles it against distro kernels *and* the latest kernel.org stable
-  and longterm releases, so post-6.18 breakage is caught before you hit
-  it. Verified up to **Linux 7.0**.
+  and longterm releases, so regressions on the supported line are caught
+  early. Verified up to **Linux 7.0.12**; **kernel 7.1 does not build
+  yet** — its cfg80211 callback refactor (net_device → wireless_dev)
+  needs separate porting work.
 - **Monitor mode that stays up.** Four separate fixes for the RX-path
   crashes that plagued the vendor driver — UBSAN out-of-bounds, a
   NULL-deref, an SKB use-after-free, and a race/double-free — plus a
@@ -264,7 +266,7 @@ sudo ./tests/run_tests.sh --all          # everything, including destructive
 | Ubuntu 22.04 LTS           | distro default     | x86_64  | CI build matrix     |
 | Ubuntu 24.04 LTS           | distro default     | x86_64  | CI build matrix     |
 
-Other kernels in the 6.1 LTS → 7.0+ range are expected to compile
+Other kernels in the 6.1 LTS → 7.0 range are expected to compile
 because every patch is gated on the relevant `LINUX_VERSION_CODE`, but
 they are not verified by the maintainer.
 
