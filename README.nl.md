@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![Nieuwste release](https://img.shields.io/github/v/release/WimLee115/rtl8852au-build?sort=semver&label=release&color=0a7ea4)](https://github.com/WimLee115/rtl8852au-build/releases/latest)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0%2B-informational.svg)](#compatibiliteit)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0-informational.svg)](#compatibiliteit)
 [![Licentie: GPL-2.0](https://img.shields.io/badge/licentie-GPL--2.0-blue.svg)](LICENSE)
 [![DKMS](https://img.shields.io/badge/DKMS-ondersteund-brightgreen.svg)](#dkms-installatie)
 [![WiFi 6](https://img.shields.io/badge/WiFi%206-AX1800-0a7ea4.svg)](#ondersteunde-apparaten)
@@ -29,8 +29,10 @@ kunnen worden.
 - **Hij bouwt op actuele kernels.** Twaalf versie-gegate
   compatibiliteitspatches dragen de vendor-broncode over de 6.17+
   API-verwijderingen; CI compileert tegen distro-kernels én de nieuwste
-  kernel.org stable- en longterm-releases, zodat breuk na 6.18 wordt
-  opgevangen vóór jij hem tegenkomt. Geverifieerd tot **Linux 7.0**.
+  kernel.org stable- en longterm-releases, zodat regressies op de
+  ondersteunde lijn vroeg worden opgevangen. Geverifieerd tot **Linux
+  7.0.12**; **kernel 7.1 bouwt nog niet** — de cfg80211-callback-refactor
+  (net_device → wireless_dev) vraagt apart porteerwerk.
 - **Monitor-mode die overeind blijft.** Vier aparte fixes voor de
   RX-path-crashes die de vendor-driver teisterden — UBSAN
   out-of-bounds, een NULL-deref, een SKB use-after-free en een
@@ -275,7 +277,7 @@ sudo ./tests/run_tests.sh --all          # alles, inclusief destructief
 | Ubuntu 22.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 | Ubuntu 24.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 
-Andere kernels in het bereik 6.1 LTS → 7.0+ worden verwacht te
+Andere kernels in het bereik 6.1 LTS → 7.0 worden verwacht te
 compileren omdat elke patch gebonden is aan een
 `LINUX_VERSION_CODE`-conditie, maar zijn niet door de maintainer
 geverifieerd.
