@@ -2446,6 +2446,23 @@ static int netdev_close(struct net_device *pnetdev)
 		goto deinit;
 	}
 
+	/* A monitor-mode interface was never associated and holds no MLME
+	 * role — it is neither AP, STA, MESH nor ADHOC. Running the disassoc
+	 * path on it makes rtw_mlmeext_disconnect() fall through to its
+	 * rtw_warn_on(1) and hand MLME_ACTION_UNKNOWN to
+	 * rtw_dfs_rd_en_decision(), which warns a second time. Beyond the log
+	 * noise this keeps the close path busy for up to ~700 ms
+	 * (rtw_disassoc_cmd WAIT_ACK plus the scan-req drain) while the RX
+	 * tasklet still delivers frames into the radiotap path, widening the
+	 * window in which it can observe half-torn-down state. There is
+	 * nothing to disconnect: go straight to deinit.
+	 */
+	if (MLME_IS_MONITOR(padapter)) {
+		RTW_INFO(FUNC_NDEV_FMT" monitor mode — skipping disassoc cmds\n",
+			 FUNC_NDEV_ARG(pnetdev));
+		goto deinit;
+	}
+
 	if (pwrctl->rf_pwrstate == rf_on) {
 		RTW_INFO("netif_up=%d, hw_init_completed=%s\n",
 			padapter->netif_up,
