@@ -381,7 +381,7 @@ driver-source patches. In short:
 
 - One logical change per commit; vendor-style for `core/`, `hal/`,
   `os_dep/` (tabs, K&R braces, no large reformats).
-- Python (`dashboard/`, `tests/`, `tools/`) passes `ruff check` with
+- Python (`dashboard/`, `tests/`) passes `ruff check` with
   the config in [`ruff.toml`](ruff.toml).
 - Shell passes `shellcheck`.
 - CI must be green before merge; branch protection on `main` enforces
