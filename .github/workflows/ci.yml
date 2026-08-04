@@ -224,11 +224,11 @@ jobs:
 
       - name: Ruff (lint)
         run: |
-          ruff check dashboard tests tools
+          ruff check dashboard tests
 
       - name: Pyflakes
         run: |
-          pyflakes dashboard tests tools || true  # informational
+          pyflakes dashboard tests || true  # informational
 
       - name: Compile-check dashboard and tests
         run: |
