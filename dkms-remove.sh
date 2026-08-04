@@ -30,12 +30,19 @@ SRC_DIR="/usr/src/${PKG_NAME}-${PKG_VER}"
 
 echo "==> Removing ${PKG_NAME} ${PKG_VER}"
 
-if [[ -n "$MOD_NAME" ]] && lsmod | grep -qw "$MOD_NAME"; then
+# A loaded module always has a /sys/module/<name> directory; check that
+# instead of `lsmod | grep -qw`, which has the same SIGPIPE-under-pipefail
+# race as the dkms-status check below.
+if [[ -n "$MOD_NAME" && -d "/sys/module/${MOD_NAME}" ]]; then
     echo "==> Unloading ${MOD_NAME}"
     modprobe -r "$MOD_NAME" || rmmod "$MOD_NAME" || true
 fi
 
-if dkms status | grep -qE "^${PKG_NAME}/${PKG_VER}"; then
+# Filter by name+version directly rather than piping `dkms status` into
+# `grep -q`; see the note in dkms-install.sh for why that pipeline was
+# unreliable (grep closing the pipe trips `set -o pipefail`, and the version
+# was an unescaped regex).
+if [[ -n "$(dkms status -m "${PKG_NAME}" -v "${PKG_VER}" 2>/dev/null || true)" ]]; then
     echo "==> dkms remove"
     dkms remove -m "${PKG_NAME}" -v "${PKG_VER}" --all || true
 fi
