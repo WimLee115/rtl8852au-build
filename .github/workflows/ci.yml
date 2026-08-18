@@ -42,9 +42,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Install build dependencies
+        # Via the hardened wrapper: a stalled mirror used to hang apt for the
+        # job's entire timeout budget without emitting a single error. The
+        # script header has the details.
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          .github/scripts/apt-install.sh \
             build-essential \
             dkms \
             xz-utils \
@@ -115,14 +117,20 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          .github/scripts/apt-install.sh \
             build-essential bc bison flex libssl-dev libelf-dev xz-utils jq curl
 
       - name: Resolve ${{ matrix.channel }} kernel version
         id: kver
         run: |
-          curl -fsSL https://www.kernel.org/releases.json -o releases.json
+          # --speed-limit/--speed-time abort a transfer that has gone quiet
+          # rather than one that is merely slow, which is the failure mode that
+          # matters here: a connection that stays open and stops sending. A
+          # bare curl waits on that indefinitely, exactly as apt used to.
+          curl --retry 3 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 15 --max-time 60 \
+            --speed-limit 1000 --speed-time 30 \
+            -fsSL https://www.kernel.org/releases.json -o releases.json
           if [ "${{ matrix.channel }}" = "stable" ]; then
             ver="$(jq -r '.latest_stable.version' releases.json)"
           else
@@ -139,7 +147,12 @@ jobs:
         run: |
           ver="${{ steps.kver.outputs.ver }}"
           major="${{ steps.kver.outputs.major }}"
-          curl -fsSL "https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${ver}.tar.xz" -o linux.tar.xz
+          # ~150 MB, so --max-time is generous; --speed-time is what actually
+          # catches a stall, well before the job timeout does.
+          curl --retry 3 --retry-delay 5 --retry-all-errors \
+            --connect-timeout 15 --max-time 900 \
+            --speed-limit 10000 --speed-time 60 \
+            -fsSL "https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${ver}.tar.xz" -o linux.tar.xz
           tar xf linux.tar.xz
           make -C "linux-${ver}" defconfig
           # The vendored Realtek tree carries many benign code-style warnings
@@ -202,12 +215,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Install deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential dkms xz-utils "linux-headers-$(uname -r)" shellcheck
+          .github/scripts/apt-install.sh \
+            build-essential dkms xz-utils "linux-headers-$(uname -r)" shellcheck
 
       - name: Lint shell scripts
         run: |
-          shellcheck dkms-install.sh dkms-remove.sh tests/run_tests.sh
+          shellcheck dkms-install.sh dkms-remove.sh tests/run_tests.sh \
+            .github/scripts/apt-install.sh
 
       - name: Install via DKMS
         run: sudo ./dkms-install.sh
