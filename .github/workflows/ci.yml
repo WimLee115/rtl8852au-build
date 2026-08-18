@@ -27,6 +27,7 @@ jobs:
   build:
     name: Build (${{ matrix.os }}, kernel ${{ matrix.kver }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -96,6 +97,7 @@ jobs:
   build-mainline:
     name: Build (mainline ${{ matrix.channel }})
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     # The newest stable often outpaces what an out-of-tree vendor driver
     # supports (e.g. kernel 7.1 refactored many cfg80211_ops callbacks from
     # net_device to wireless_dev). The build step treats a stable-channel
@@ -194,6 +196,7 @@ jobs:
   dkms:
     name: DKMS scripts dry-run
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     needs: build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -226,6 +229,7 @@ jobs:
   python:
     name: Python lint and offline tests
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
