@@ -275,6 +275,13 @@ Other kernels in the 6.1 LTS → 7.0 range are expected to compile
 because every patch is gated on the relevant `LINUX_VERSION_CODE`, but
 they are not verified by the maintainer.
 
+CI also builds against the newest kernel.org **longterm** and **stable**
+releases, resolved at run time, on every push *and* weekly on a schedule —
+so a new LTS that breaks the build surfaces the week it lands rather than
+whenever the next commit happens to arrive. Longterm is a hard gate;
+newest-stable is an informational early warning, currently expected to fail
+on kernel 7.1.
+
 ## Troubleshooting
 
 <details>

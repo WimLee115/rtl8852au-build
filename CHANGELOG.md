@@ -7,6 +7,20 @@ changes in this file.
 
 ## [Unreleased]
 
+### Added
+- **CI runs weekly on a schedule** (Mondays, 05:17 UTC) in addition to push
+  and pull-request triggers. The `build-mainline` job resolves the newest
+  kernel.org stable and longterm releases at run time, so what it tests moves
+  on its own — on a push-only trigger a quiet week produced no signal at all,
+  and a new LTS that broke the build would sit undetected until the next
+  commit. Monday because Linus cuts releases on Sunday; off the hour because
+  scheduled runs cluster and get delayed at `:00`.
+
+### Changed
+- **`build-mainline` now records the kernel it resolved** in the job summary,
+  on success as well as failure. A bare green tick did not say which version
+  was actually tested, which is precisely the question a scheduled run raises.
+
 ## [1.16.1] — 2026-08-18
 
 A maintenance release on top of `1.16.0`: one monitor-mode kernel panic, three
