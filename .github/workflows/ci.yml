@@ -6,6 +6,18 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # Weekly, Monday 05:17 UTC.
+  #
+  # The build-mainline job resolves the newest kernel.org stable and longterm
+  # releases at run time, so what it tests changes without anyone touching
+  # this repository — and on a push-only trigger a quiet week means no signal
+  # at all. A new LTS that breaks the build is a hard failure worth an email
+  # the week it lands, not whenever the next commit happens to arrive.
+  #
+  # Monday because Linus cuts releases on Sunday. Off the hour because
+  # scheduled runs cluster (and get delayed) at :00.
+  schedule:
+    - cron: "17 5 * * 1"
 
 permissions:
   contents: read
@@ -152,11 +164,17 @@ jobs:
           # that to a warning — this is a compile/link test, and real
           # source-level breakage is already caught in the compile phase
           # before modpost runs.
+          # Record which kernel this job actually resolved, whatever the
+          # outcome. On the weekly schedule the version moves on its own, so a
+          # bare green tick does not say what was tested — and when a run does
+          # go red, the first question is always "against which kernel?".
+          chan="${{ matrix.channel }}"
           set -o pipefail
           if make KVER="${krel}" KBUILD_MODPOST_WARN=1 -j"$(nproc)" 2>&1 | tee build-mainline.log && test -f 8852au.ko; then
             echo "Module built successfully against ${ver}."
             modinfo ./8852au.ko | grep -E "vermagic|^version" || true
-          elif [ "${{ matrix.channel }}" = "stable" ]; then
+            echo "✅ **\`${chan}\`** — builds against Linux \`${ver}\`" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$chan" = "stable" ]; then
             # Newest-stable is a forward-looking probe: report loudly, but do
             # not fail the job — otherwise every branch shows a red X for a
             # known limitation.
@@ -167,6 +185,8 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::error title=LTS ${ver} does not build::The driver failed to build against the longterm/LTS kernel ${ver}."
+            echo "### ❌ Longterm \`${ver}\` does not build" >> "$GITHUB_STEP_SUMMARY"
+            echo "This is a regression gate — the LTS kernel must build." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 

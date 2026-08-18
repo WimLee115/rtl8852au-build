@@ -287,6 +287,13 @@ compileren omdat elke patch gebonden is aan een
 `LINUX_VERSION_CODE`-conditie, maar zijn niet door de maintainer
 geverifieerd.
 
+CI bouwt daarnaast tegen de nieuwste **longterm**- en **stable**-releases van
+kernel.org, tijdens de run opgehaald, bij elke push *én* wekelijks volgens
+schema — zo komt een nieuwe LTS die de build breekt aan het licht in de week
+dat hij uitkomt, in plaats van pas bij de volgende commit. Longterm is een
+harde poort; nieuwste-stable is een informatieve vroege waarschuwing, die op
+kernel 7.1 momenteel faalt.
+
 ## Probleemoplossing
 
 <details>
