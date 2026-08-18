@@ -22,11 +22,12 @@ if [[ ! -f dkms.conf ]]; then
     exit 1
 fi
 
+# PACKAGE_VERSION is deliberately not read here: this script removes every
+# registered version of the package, so the one dkms.conf happens to name is
+# not the right thing to key off — after a version bump it is precisely the
+# version that is *not* installed.
 PKG_NAME="$(awk -F'"' '/^PACKAGE_NAME=/{print $2}' dkms.conf)"
-PKG_VER="$(awk -F'"' '/^PACKAGE_VERSION=/{print $2}' dkms.conf)"
 MOD_NAME="$(awk -F'"' '/^BUILT_MODULE_NAME\[0\]=/{print $2}' dkms.conf)"
-
-SRC_DIR="/usr/src/${PKG_NAME}-${PKG_VER}"
 
 # See the note in dkms-install.sh: accept either separator, and stop at the
 # first comma or colon so an "added"-only entry parses too.
