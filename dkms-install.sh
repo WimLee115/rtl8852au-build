@@ -39,6 +39,18 @@ fi
 
 SRC_DIR="/usr/src/${PKG_NAME}-${PKG_VER}"
 
+# Every version of $1 that DKMS currently knows about, one per line.
+#
+# `dkms status` prints "name/version, kernel, arch: state" on DKMS 3.x and
+# "name, version, kernel, arch: state" on 2.x, and drops the kernel/arch part
+# entirely for an entry that is only "added" — so accept either separator and
+# stop at the first comma or colon.
+dkms_versions() {
+    dkms status -m "$1" 2>/dev/null \
+        | sed -n "s|^$1[/,] *\([^,:]*\).*|\1|p" \
+        | sort -u
+}
+
 # Sanity checks for build dependencies
 for cmd in dkms make gcc; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
@@ -55,19 +67,29 @@ fi
 
 echo "==> Installing ${PKG_NAME} ${PKG_VER} via DKMS"
 
-# Remove any stale registration for this name+version (idempotent re-run).
+# Remove every existing registration for this package, at any version.
 #
-# Ask DKMS to filter by name+version directly instead of piping `dkms status`
-# into `grep -q`. That pipeline had two bugs: (1) `grep -q` closes the pipe on
-# its first match, sending SIGPIPE to `dkms status`, which under `set -o
-# pipefail` makes the whole condition fail — so the stale entry silently
-# survived and the later `dkms add` collided with "module/version already in
-# the tree"; (2) PACKAGE_VERSION was used unescaped in a regex, so the dots in
-# 1.15.0.1 matched any character. Filtering server-side sidesteps both.
-if [[ -n "$(dkms status -m "${PKG_NAME}" -v "${PKG_VER}" 2>/dev/null || true)" ]]; then
-    echo "==> Removing existing DKMS entry ${PKG_NAME}/${PKG_VER}"
-    dkms remove -m "${PKG_NAME}" -v "${PKG_VER}" --all || true
-fi
+# Ask DKMS for the list instead of piping `dkms status` into `grep -q`. That
+# pipeline had two bugs: (1) `grep -q` closes the pipe on its first match,
+# sending SIGPIPE to `dkms status`, which under `set -o pipefail` makes the
+# whole condition fail — so the stale entry silently survived and the later
+# `dkms add` collided with "module/version already in the tree"; (2)
+# PACKAGE_VERSION was used unescaped in a regex, so the dots in 1.15.0.1
+# matched any character.
+#
+# Matching on name+version alone was still not enough: on a version bump the
+# *previous* version stayed registered, and both entries then install the same
+# 8852au.ko into /updates/dkms on every kernel upgrade. Clearing all versions
+# makes an upgrade leave exactly one entry behind.
+for stale_ver in $(dkms_versions "${PKG_NAME}"); do
+    echo "==> Removing existing DKMS entry ${PKG_NAME}/${stale_ver}"
+    dkms remove -m "${PKG_NAME}" -v "${stale_ver}" --all || true
+    stale_src="/usr/src/${PKG_NAME}-${stale_ver}"
+    if [[ -d "$stale_src" && "$stale_src" != "$SRC_DIR" ]]; then
+        echo "==> Removing ${stale_src}"
+        rm -rf "$stale_src"
+    fi
+done
 
 echo "==> Copying source to ${SRC_DIR}"
 rm -rf "${SRC_DIR}"

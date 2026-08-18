@@ -404,6 +404,9 @@ driver-source patches. In short:
   Archer TX35U Plus USB ID and the kernel 6.8 build fix (PR #3).
 - **[74Thirsty (`gadgetsaavy`)](https://github.com/74Thirsty)** — D-Link
   DWA-1850 USB ID `2001:332c` and Parrot OS 6/7 testing (PR #14).
+- **[Omelug](https://github.com/Omelug)** — hardware report for
+  `0bda:8832` that surfaced the DKMS module-path and USB-hub binding
+  bugs in the test suite (issue #43).
 - **[WimLee115](https://github.com/WimLee115)** — fork maintenance,
   kernel-compatibility patches, test suite, dashboard.
 

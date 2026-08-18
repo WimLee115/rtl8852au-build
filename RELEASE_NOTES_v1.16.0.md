@@ -57,5 +57,3 @@ Realtek (original vendor driver), [lwfinger](https://github.com/lwfinger) and [m
 ---
 
 **Disclaimer.** Independent community fork — not affiliated with, endorsed by, or sponsored by Realtek Semiconductor Corp. or any hardware vendor named here. The firmware blob is © Realtek, redistributed unchanged from the vendor bundle and checksum-verified in CI. Released under the **GNU GPL-2.0**, provided "AS IS" without warranty of any kind.
-
-<sub>🤖 Release notes drafted with [Claude Code](https://claude.com/claude-code)</sub>

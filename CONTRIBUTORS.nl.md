@@ -21,6 +21,11 @@ wordt automatisch gegenereerd uit de commit-historie.
 - **[74Thirsty — `gadgetsaavy`](https://github.com/74Thirsty)** — D-Link
   DWA-1850 USB-ID (`2001:332c`) en testen op Parrot OS 6/7
   ([PR #14](https://github.com/WimLee115/rtl8852au-build/pull/14)).
+- **[Omelug](https://github.com/Omelug)** — hardwarerapport voor `0bda:8832`
+  op kernel 7.0.12, waarmee twee bugs in de test suite aan het licht kwamen:
+  het modulepad was hardgecodeerd op een in-tree build, en adapters achter
+  een USB-hub golden als niet-gebonden
+  ([issue #43](https://github.com/WimLee115/rtl8852au-build/issues/43)).
 
 ## Acknowledgements
 

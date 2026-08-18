@@ -7,13 +7,58 @@ changes in this file.
 
 ## [Unreleased]
 
-### Removed
-- `tools/tapo_rtsp_brute.py` and the whole `tools/` directory. The RTSP
-  credential brute-forcer was unrelated to the WiFi driver and out of scope
-  for this repository; its CI compile-check, its ruff per-file ignore and its
-  entry in the architecture docs are removed along with it.
+## [1.16.1] — 2026-08-18
+
+A maintenance release on top of `1.16.0`: one monitor-mode kernel panic, three
+DKMS packaging faults, and a test suite that reported failures against
+perfectly healthy installs.
 
 ### Fixed
+
+- **Kernel panic when leaving monitor mode under RX load.**
+  `rtw_fill_radiotap_hdr()` runs in softirq from the USB RX tasklet and
+  dereferences `padapter->phl_role` for the band, channel and bandwidth
+  fields. `netdev_close()` clears that pointer through
+  `rtw_hw_iface_deinit()` while the tasklet can still be inside
+  `recv_frame_monitor()` — the `netif_running()` guard there is evaluated
+  before `skb_copy_expand()`, so it does not cover the radiotap fill that
+  follows. The result was a fatal in-interrupt NULL deref (fault address
+  `0x4e8` = `chandef.band` in the freed `rtw_wifi_role_t`) after long
+  `airodump-ng` captures. The radiotap path now bails out and drops the frame
+  when any of `padapter`/`dvobj`/`phl_com`/`phl_role` is NULL, and
+  `netdev_close()` skips the disassoc path for a monitor interface, which
+  holds no MLME role to disconnect and whose ~700 ms `WAIT_ACK` only widened
+  the teardown race. Regression test included.
+- **DKMS status checks were racy and matched too loosely.** Both install and
+  remove scripts piped `dkms status` into `grep -q`, which closes the pipe on
+  its first match; `dkms status` then takes SIGPIPE and exits non-zero, so
+  under `set -o pipefail` the whole condition evaluated false. When it lost
+  that race the install skipped its cleanup and `dkms add` aborted with
+  "DKMS tree already contains". `PACKAGE_VERSION` was also interpolated into
+  the regex unescaped, so the dots in a version matched any character. Both
+  scripts now let DKMS filter directly (`dkms status -m NAME -v VER`), and the
+  module-loaded check tests `/sys/module/<name>` instead of piping `lsmod`.
+  Reproduced under `pipefail` with a multi-line status stub: the old form
+  matched 0/20 runs, the new form 20/20.
+- **DKMS registered under the vendor version.** `dkms.conf` still declared
+  `PACKAGE_VERSION` `1.15.0.1` — the Realtek baseline — while the project had
+  released `1.16.0` on its own SemVer line, so a fresh install registered
+  under the old number. That stale entry was a factor in the install collision
+  above.
+- **A version bump orphaned the previous DKMS entry.** Both scripts acted only
+  on the version `dkms.conf` currently names, so upgrading left the old entry
+  registered — and two entries then install the same `8852au.ko` into
+  `/updates/dkms` on every kernel upgrade. Worse, `dkms-remove.sh` could no
+  longer remove the orphan at all, since the checked-out `dkms.conf` no longer
+  matched it. Both scripts now enumerate every registered version of the
+  package and clear them, and `dkms-remove.sh` also sweeps the matching
+  `/usr/src/<name>-*` trees. The version parser accepts DKMS 2.x and 3.x
+  output as well as an "added"-only entry that carries no kernel/arch fields.
+- **Kernel-range claims corrected.** Both READMEs advertised "kernel
+  6.1 → 7.0+" and claimed CI catches post-6.18 breakage before you hit it.
+  Neither held: the newest-stable CI job is non-blocking, and kernel 7.1 does
+  not build. The "+" is gone and the 7.1 limitation is named, with "verified
+  up to Linux 7.0.12".
 - **The test suite no longer fails on a working DKMS install.**
   `tests/test_driver.py` hard-coded the module path to `<repo>/8852au.ko`, so
   anyone who installed with `./dkms-install.sh` — the method the README
@@ -44,6 +89,14 @@ changes in this file.
   module-path parsing above, and a CI step that runs it. Every other class in
   the suite needs a physical adapter, so this logic previously had no
   automated coverage at all.
+- `./tests/run_tests.sh --offline` selects that class from the runner — the
+  one selection that is meaningful without an adapter or root.
+
+### Removed
+- `tools/tapo_rtsp_brute.py` and the whole `tools/` directory. The RTSP
+  credential brute-forcer was unrelated to the WiFi driver and out of scope
+  for this repository; its CI compile-check, its ruff per-file ignore and its
+  entry in the architecture docs are removed along with it.
 
 ## [1.16.0] — 2026-08-01
 
