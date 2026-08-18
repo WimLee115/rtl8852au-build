@@ -42,6 +42,15 @@ changes in this file.
 - **`build-mainline` now records the kernel it resolved** in the job summary,
   on success as well as failure. A bare green tick did not say which version
   was actually tested, which is precisely the question a scheduled run raises.
+- **Both READMEs now say what actually blocks kernel 7.x.** They named the
+  cfg80211 callback refactor as the sole reason 7.1 does not build, and pinned
+  the expected newest-stable failure to 7.1. A probe against 7.2 found four
+  independent blockers rather than one — the cfg80211 refactor, the removal of
+  `strncpy`, the reworked pppoe structs behind `CONFIG_RTW_BR_EXT`, and a
+  dropped wiphy flag — and the newest stable has since moved on to 7.2, so the
+  version-pinned wording was going stale on its own. The build claim now reads
+  "7.1 and newer", and the CI note is phrased against the outstanding port
+  rather than one release.
 - **The DKMS dry-run no longer waits on the build matrix.** It shares no
   artefact with those jobs — `dkms-install.sh` strips `*.ko` and `*.o` out of
   the tree it copies, and `dkms build` compiles from source — so `needs: build`

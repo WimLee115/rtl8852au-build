@@ -31,8 +31,11 @@ kunnen worden.
   API-verwijderingen; CI compileert tegen distro-kernels én de nieuwste
   kernel.org stable- en longterm-releases, zodat regressies op de
   ondersteunde lijn vroeg worden opgevangen. Geverifieerd tot **Linux
-  7.0.12**; **kernel 7.1 bouwt nog niet** — de cfg80211-callback-refactor
-  (net_device → wireless_dev) vraagt apart porteerwerk.
+  7.0.12**; **kernel 7.1 en nieuwer bouwen nog niet**. Een probe tegen 7.2
+  vond vier onafhankelijke blokkades, niet één: de
+  cfg80211-callback-refactor (net_device → wireless_dev), het verwijderen
+  van `strncpy`, de herziene pppoe-structs achter `CONFIG_RTW_BR_EXT` en
+  een geschrapte wiphy-vlag. Elk vraagt apart porteerwerk.
 - **Monitor-mode die overeind blijft.** Vier aparte fixes voor de
   RX-path-crashes die de vendor-driver teisterden — UBSAN
   out-of-bounds, een NULL-deref, een SKB use-after-free en een
@@ -295,8 +298,8 @@ CI bouwt daarnaast tegen de nieuwste **longterm**- en **stable**-releases van
 kernel.org, tijdens de run opgehaald, bij elke push *én* wekelijks volgens
 schema — zo komt een nieuwe LTS die de build breekt aan het licht in de week
 dat hij uitkomt, in plaats van pas bij de volgende commit. Longterm is een
-harde poort; nieuwste-stable is een informatieve vroege waarschuwing, die op
-kernel 7.1 momenteel faalt.
+harde poort; nieuwste-stable is een informatieve vroege waarschuwing, en die
+blijft falen zolang de 7.x-port openstaat (7.2 op het moment van schrijven).
 
 ## Probleemoplossing
 
