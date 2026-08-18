@@ -8,6 +8,16 @@ changes in this file.
 ## [Unreleased]
 
 ### Added
+- **Every CI job now carries an explicit `timeout-minutes`** — 20 for the
+  distro build matrix, 25 for `build-mainline`, 20 for the DKMS dry-run,
+  and 10 for the Python job and both Pages jobs. GitHub's default is six
+  hours, and a run on `main` showed what that costs: `Install build
+  dependencies` sat for 22 minutes on an `apt-get update` retrying an
+  unreachable `azure.archive.ubuntu.com` mirror, against a normal job time
+  of under two minutes. Weekly scheduled runs make that worse — nobody is
+  watching a Monday-morning build, so a hung job would hold a runner slot
+  most of the day before the default fired. Each limit is roughly ten times
+  the observed runtime, so ordinary mirror slowness still passes.
 - **CI runs weekly on a schedule** (Mondays, 05:17 UTC) in addition to push
   and pull-request triggers. The `build-mainline` job resolves the newest
   kernel.org stable and longterm releases at run time, so what it tests moves
