@@ -29,9 +29,12 @@ upstream changes can be re-applied later.
   patches carry the vendor source across the 6.17+ API removals; CI
   compiles it against distro kernels *and* the latest kernel.org stable
   and longterm releases, so regressions on the supported line are caught
-  early. Verified up to **Linux 7.0.12**; **kernel 7.1 does not build
-  yet** — its cfg80211 callback refactor (net_device → wireless_dev)
-  needs separate porting work.
+  early. Verified up to **Linux 7.0.12**; **kernel 7.1 and newer do not
+  build yet**. A probe against 7.2 found four independent blockers, not
+  one: the cfg80211 callback refactor (net_device → wireless_dev), the
+  removal of `strncpy`, the reworked pppoe structs behind
+  `CONFIG_RTW_BR_EXT`, and a dropped wiphy flag. Each needs separate
+  porting work.
 - **Monitor mode that stays up.** Four separate fixes for the RX-path
   crashes that plagued the vendor driver — UBSAN out-of-bounds, a
   NULL-deref, an SKB use-after-free, and a race/double-free — plus a
@@ -282,8 +285,8 @@ CI also builds against the newest kernel.org **longterm** and **stable**
 releases, resolved at run time, on every push *and* weekly on a schedule —
 so a new LTS that breaks the build surfaces the week it lands rather than
 whenever the next commit happens to arrive. Longterm is a hard gate;
-newest-stable is an informational early warning, currently expected to fail
-on kernel 7.1.
+newest-stable is an informational early warning, and it is expected to fail
+for as long as the 7.x port is outstanding (7.2 at the time of writing).
 
 ## Troubleshooting
 
