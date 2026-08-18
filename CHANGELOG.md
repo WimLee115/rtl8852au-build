@@ -17,6 +17,18 @@ changes in this file.
   scheduled runs cluster and get delayed at `:00`.
 
 ### Changed
+- **`0bda:8832` (Realtek RTL8832AU reference board) moves from
+  Recognised to Tested (reported)** in the supported-devices table.
+  The reporter in
+  [#43](https://github.com/WimLee115/rtl8852au-build/issues/43) ran the
+  full suite on a DKMS install under kernel `7.0.12+kali-amd64` — 30
+  tests, 27 passed, 0 failed — and confirmed association and monitor
+  mode on the device. The status carries a *(reported)* suffix, and the
+  legend in both READMEs and on the landing page now says what that
+  means: the verification comes from the person who filed the hardware
+  request, with the evidence in their issue, rather than from the
+  maintainer on hardware in hand. Without that distinction *Tested*
+  would quietly claim more than the project can vouch for.
 - **`build-mainline` now records the kernel it resolved** in the job summary,
   on success as well as failure. A bare green tick did not say which version
   was actually tested, which is precisely the question a scheduled run raises.

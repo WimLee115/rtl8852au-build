@@ -25,6 +25,8 @@ is generated automatically from commit history.
   on kernel 7.0.12, which surfaced two test-suite bugs: the module path was
   hard-coded to an in-tree build, and adapters behind a USB hub read as
   unbound ([issue #43](https://github.com/WimLee115/rtl8852au-build/issues/43)).
+  Re-ran the suite after the fix and confirmed association and monitor mode,
+  which is what moved that ID to *Tested (reported)*.
 
 ## Acknowledgements
 
