@@ -43,6 +43,31 @@ changes in this file.
   on success as well as failure. A bare green tick did not say which version
   was actually tested, which is precisely the question a scheduled run raises.
 
+### Fixed
+- **CI no longer hangs on a stalled Ubuntu mirror.** The runners resolve
+  archives through a mirrorlist; when the Azure mirror is unreachable, apt
+  falls back to `archive.ubuntu.com`, where a connection can stall with the
+  response headers received and the body never arriving. apt applies no
+  transfer timeout by default, and retries do not help because a stall is not
+  an error — so it waits forever. On 2026-08-18 that cost four jobs 20-25
+  idle minutes each, in three separate runs, always on the same
+  `<suite>-security InRelease` fetch; jobs that reached the Azure mirror in
+  those same runs finished in about two minutes. Package installation now
+  goes through `.github/scripts/apt-install.sh`, which sets
+  `Acquire::http/https::Timeout` (turning a stall into a retryable failure),
+  `Acquire::Retries`, and `DPkg::Lock::Timeout` for a runner where
+  unattended-upgrades still holds the dpkg lock, with `timeout(1)` plus a
+  shared 600-second budget as the backstop. That budget matters beyond speed:
+  a job killed by `timeout-minutes` reports `cancelled`, for which GitHub
+  sends no failure notification, so a stall on the weekly schedule would have
+  passed silently — a failing *step* is a real red X that names apt.
+- **The two `curl` downloads in `build-mainline` carry the same protection.**
+  `kernel.org/releases.json` and the ~150 MB kernel tarball ran without a
+  connect timeout, retry or stall detection, which is the same failure class
+  in the job with the largest transfers. Both now use `--retry` with
+  `--speed-limit`/`--speed-time`, which aborts a transfer that has gone quiet
+  rather than one that is merely slow.
+
 ## [1.16.1] — 2026-08-18
 
 A maintenance release on top of `1.16.0`: one monitor-mode kernel panic, three
