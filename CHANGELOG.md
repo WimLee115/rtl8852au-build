@@ -42,6 +42,14 @@ changes in this file.
 - **`build-mainline` now records the kernel it resolved** in the job summary,
   on success as well as failure. A bare green tick did not say which version
   was actually tested, which is precisely the question a scheduled run raises.
+- **The DKMS dry-run no longer waits on the build matrix.** It shares no
+  artefact with those jobs — `dkms-install.sh` strips `*.ko` and `*.o` out of
+  the tree it copies, and `dkms build` compiles from source — so `needs: build`
+  only ever ordered them. The cost was real: a job skipped because its `needs`
+  went unmet reports *success*, and `DKMS scripts dry-run` is a required check,
+  so a single stalled Ubuntu mirror in one build leg turned a required check
+  green without running it. It also gated the repository's only `shellcheck`
+  run behind an apt step on a different runner.
 
 ### Fixed
 - **CI no longer hangs on a stalled Ubuntu mirror.** The runners resolve
@@ -66,7 +74,23 @@ changes in this file.
   connect timeout, retry or stall detection, which is the same failure class
   in the job with the largest transfers. Both now use `--retry` with
   `--speed-limit`/`--speed-time`, which aborts a transfer that has gone quiet
-  rather than one that is merely slow.
+  rather than one that is merely slow, and `--retry-max-time` to bound the
+  retry sequence. That last part was the catch: `--max-time` applies to a
+  single attempt, so `--retry 3 --max-time 900` on the ~150 MB tarball was
+  really a 3615-second ceiling — over an hour, against a job limited to 25
+  minutes. The stall protection was real; the total was bounded by nothing
+  except the job timeout it was written to stay inside.
+- **A failed `make` no longer passes the build step.** `make | tee build.log`
+  reports tee's exit status, not make's, so the distro matrix relied entirely
+  on the `test -f 8852au.ko` that follows — and that only catches failures
+  which leave no module behind. `all:` builds `firmware` and `modules` as
+  independent goals with no ordering between them, so under `-j` make can fail
+  on the firmware step and still link `8852au.ko`, exiting non-zero into a
+  green tick. The step now sets `pipefail`, as the mainline job always has.
+  `Module metadata` had the same defect from the other direction: `modinfo` on
+  a missing or unreadable module exits 0 once piped into `head`, so that step
+  could never fail either. It reads through `sed` now, which does not close the
+  pipe early and therefore reports modinfo's real status.
 
 ## [1.16.1] — 2026-08-18
 

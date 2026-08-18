@@ -64,13 +64,30 @@ jobs:
           sha256sum -c CHECKSUMS.sha256
 
       - name: Build module
+        # Without pipefail the pipeline reports tee's status, not make's, so a
+        # broken build is caught only by the `test -f` below -- and that misses
+        # every failure that still leaves a module on disk. `all:` runs
+        # `firmware` and `modules` as independent goals, so under -j make can
+        # exit non-zero on the firmware step while modules links 8852au.ko
+        # anyway, and the step goes green on a build that failed. The mainline
+        # job below has always set this; the distro matrix was the one that did
+        # not.
         run: |
+          set -euo pipefail
           make -j"$(nproc)" 2>&1 | tee build.log
           test -f 8852au.ko
 
       - name: Module metadata
+        # sed rather than head, because head closes the pipe after 40 lines and
+        # modinfo has ~160 to write: the next write takes SIGPIPE. That is
+        # invisible today only because the pipeline reports head's status, and
+        # it turns into exit 141 on every run the moment anyone adds pipefail.
+        # sed reads to EOF, so the status is modinfo's -- worth having, since
+        # `modinfo` on a missing or unreadable module currently exits 0 and this
+        # step passes.
         run: |
-          modinfo ./8852au.ko | head -40
+          set -euo pipefail
+          modinfo ./8852au.ko | sed -n '1,40p'
 
       - name: Count warnings
         run: |
@@ -127,9 +144,14 @@ jobs:
           # rather than one that is merely slow, which is the failure mode that
           # matters here: a connection that stays open and stops sending. A
           # bare curl waits on that indefinitely, exactly as apt used to.
-          curl --retry 3 --retry-delay 5 --retry-all-errors \
-            --connect-timeout 15 --max-time 60 \
-            --speed-limit 1000 --speed-time 30 \
+          #
+          # --max-time bounds one attempt, not the sequence, so --retry
+          # multiplies it; --retry-max-time is what caps the whole thing. The
+          # ceiling here is 40s of retry window plus one final 20s attempt, for
+          # a 30 kB file that has never taken a second.
+          curl --retry 2 --retry-delay 5 --retry-all-errors --retry-max-time 40 \
+            --connect-timeout 15 --max-time 20 \
+            --speed-limit 1000 --speed-time 10 \
             -fsSL https://www.kernel.org/releases.json -o releases.json
           if [ "${{ matrix.channel }}" = "stable" ]; then
             ver="$(jq -r '.latest_stable.version' releases.json)"
@@ -147,11 +169,18 @@ jobs:
         run: |
           ver="${{ steps.kver.outputs.ver }}"
           major="${{ steps.kver.outputs.major }}"
-          # ~150 MB, so --max-time is generous; --speed-time is what actually
-          # catches a stall, well before the job timeout does.
-          curl --retry 3 --retry-delay 5 --retry-all-errors \
-            --connect-timeout 15 --max-time 900 \
-            --speed-limit 10000 --speed-time 60 \
+          # --max-time bounds one attempt, not the sequence: with --retry 3 the
+          # old 900s ceiling was really (3+1)*900 + 3*5 = 3615s, more than twice
+          # this job's own 25-minute limit. Overrunning that limit kills the job
+          # rather than the step, and a killed job reports `cancelled`, which
+          # sends no notification -- precisely the silence the weekly schedule
+          # exists to break. --retry-max-time caps the sequence at 240s of retry
+          # window plus one final 120s attempt. The CDN delivers this ~150 MB
+          # file in well under 15s, so 120s still admits a mirror running ten
+          # times slower than anything yet observed.
+          curl --retry 2 --retry-delay 5 --retry-all-errors --retry-max-time 240 \
+            --connect-timeout 15 --max-time 120 \
+            --speed-limit 10000 --speed-time 30 \
             -fsSL "https://cdn.kernel.org/pub/linux/kernel/v${major}.x/linux-${ver}.tar.xz" -o linux.tar.xz
           tar xf linux.tar.xz
           make -C "linux-${ver}" defconfig
@@ -206,11 +235,19 @@ jobs:
           fi
 
   # ── DKMS install/remove dry-run (validates the helper scripts) ─────────
+  #
+  # Deliberately not `needs: build`. Nothing here consumes what that job
+  # produces -- dkms-install.sh strips *.ko and *.o out of the tree it copies,
+  # and `dkms build` recompiles from source -- so the edge only ever ordered the
+  # two, and it put the repository's only shellcheck run behind an apt step on
+  # somebody else's runner. In run 32161189076 a stalled mirror killed the
+  # ubuntu-22.04 build at 16:56:45 and this job was skipped in the same second;
+  # a job skipped by an unmet `needs` reports success, so a required check went
+  # green having never run. Nothing that did not run should look like it passed.
   dkms:
     name: DKMS scripts dry-run
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: build
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Install deps
@@ -233,6 +270,11 @@ jobs:
         run: sudo ./dkms-remove.sh
 
       - name: Verify clean state
+        # Do not add pipefail to this step. `grep -q` exits on the first match,
+        # so `dkms status` takes SIGPIPE and the pipeline returns 141 rather
+        # than 0: the `if` goes false and the gate stops firing exactly when it
+        # has something to catch. Safe at today's one or two DKMS entries, but
+        # it fails open, not shut, once the runner image carries more.
         run: |
           if dkms status | grep -q rtl8852au; then
             echo "::error::DKMS entry still present after remove"
