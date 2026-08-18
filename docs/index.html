@@ -438,7 +438,7 @@
         <tbody>
           <tr><td class="id">2357:013f</td><td>TP-Link Archer TX20U Plus</td><td>RTL8852AU</td><td><span class="pill tested">Tested</span></td></tr>
           <tr><td class="id">3625:010f</td><td>TP-Link Archer TX35U Plus</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
-          <tr><td class="id">0bda:8832</td><td>Realtek reference board</td><td>RTL8832AU</td><td><span class="pill reco">Recognised</span></td></tr>
+          <tr><td class="id">0bda:8832</td><td>Realtek reference board</td><td>RTL8832AU</td><td><span class="pill tested" title="Verified by the reporter in issue #43, not by the maintainer">Tested · reported</span></td></tr>
           <tr><td class="id">0bda:885a</td><td>Realtek reference board</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
           <tr><td class="id">0bda:885c</td><td>Realtek reference board</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
           <tr><td class="id">0b05:1997</td><td>ASUS USB-AX56 (variant)</td><td>RTL8852AU</td><td><span class="pill reco">Recognised</span></td></tr>
@@ -454,7 +454,7 @@
         </tbody>
       </table>
     </div>
-    <p class="note"><b>Tested</b> = maintainer verified bind, association and traffic on that device. <i>Recognised</i> = the USB ID is in the driver and the chipset matches, but a full end-to-end check is pending. Have one of the Recognised adapters working? <a href="https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml">Send an <code>lsusb -v</code> report</a> and it moves to Tested.</p>
+    <p class="note"><b>Tested</b> = bind, association and traffic verified on that device. <b>Tested · reported</b> means that verification came from the person who filed the hardware request rather than from the maintainer — for <code>0bda:8832</code> the evidence is the full test-suite run in <a href="https://github.com/WimLee115/rtl8852au-build/issues/43">#43</a>. <i>Recognised</i> = the USB ID is in the driver and the chipset matches, but a full end-to-end check is pending. Have one of the Recognised adapters working? <a href="https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml">Send an <code>lsusb -v</code> report</a> and it moves to Tested.</p>
   </div>
 </section>
 

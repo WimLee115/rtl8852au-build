@@ -141,28 +141,31 @@ sudo ./dkms-remove.sh
 USB adapters based on the **RTL8852AU** or **RTL8832AU** chipset. The
 table below is generated from `os_dep/linux/usb_intf.c`.
 
-| USB ID       | Device                         | Chipset    | Status     |
-|--------------|--------------------------------|------------|------------|
-| `0bda:8832`  | Realtek reference board        | RTL8832AU  | Recognised |
-| `0bda:885a`  | Realtek reference board        | RTL8852AU  | Recognised |
-| `0bda:885c`  | Realtek reference board        | RTL8852AU  | Recognised |
-| `0b05:1997`  | ASUS USB-AX56 (variant)        | RTL8852AU  | Recognised |
-| `0b05:1a62`  | ASUS USB-AX56 (no cradle)      | RTL8832AU  | Recognised |
-| `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Recognised |
-| `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Recognised |
-| `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Recognised |
-| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Recognised |
-| `35bc:0100`  | TP-Link AX1800 (generic)       | RTL8852AU  | Recognised |
-| `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested** |
-| `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised |
-| `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised |
-| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Recognised |
-| `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Recognised |
+| USB ID       | Device                         | Chipset    | Status                |
+|--------------|--------------------------------|------------|-----------------------|
+| `0bda:8832`  | Realtek reference board        | RTL8832AU  | **Tested** (reported) |
+| `0bda:885a`  | Realtek reference board        | RTL8852AU  | Recognised            |
+| `0bda:885c`  | Realtek reference board        | RTL8852AU  | Recognised            |
+| `0b05:1997`  | ASUS USB-AX56 (variant)        | RTL8852AU  | Recognised            |
+| `0b05:1a62`  | ASUS USB-AX56 (no cradle)      | RTL8832AU  | Recognised            |
+| `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Recognised            |
+| `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Recognised            |
+| `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Recognised            |
+| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Recognised            |
+| `35bc:0100`  | TP-Link AX1800 (generic)       | RTL8852AU  | Recognised            |
+| `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested**            |
+| `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
+| `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
+| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Recognised            |
+| `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Recognised            |
 
-**Tested** means the maintainer has verified bind, association and
-traffic on that specific device. **Recognised** means the USB ID is in
-the driver and the chipset matches, but a full end-to-end check is
-pending.
+**Tested** means bind, association and traffic have been verified on
+that specific device. A *(reported)* suffix marks a device verified by
+the person who filed the hardware request rather than by the maintainer
+— for `0bda:8832` that evidence is the full test-suite run posted in
+[#43](https://github.com/WimLee115/rtl8852au-build/issues/43).
+**Recognised** means the USB ID is in the driver and the chipset
+matches, but a full end-to-end check is pending.
 
 To request a new ID, open a [hardware support
 request](https://github.com/WimLee115/rtl8852au-build/issues/new?template=hardware_support.yml)

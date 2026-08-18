@@ -26,6 +26,8 @@ wordt automatisch gegenereerd uit de commit-historie.
   het modulepad was hardgecodeerd op een in-tree build, en adapters achter
   een USB-hub golden als niet-gebonden
   ([issue #43](https://github.com/WimLee115/rtl8852au-build/issues/43)).
+  Draaide de suite na de fix opnieuw en bevestigde associatie en monitor
+  mode, waarmee die ID op *Getest (melder)* kwam.
 
 ## Acknowledgements
 

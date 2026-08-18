@@ -148,26 +148,30 @@ USB-adapters gebaseerd op de **RTL8852AU**- of
 **RTL8832AU**-chipset. De onderstaande tabel wordt gegenereerd uit
 `os_dep/linux/usb_intf.c`.
 
-| USB-ID       | Apparaat                       | Chipset    | Status     |
-|--------------|--------------------------------|------------|------------|
-| `0bda:8832`  | Realtek-referentiebord         | RTL8832AU  | Herkend    |
-| `0bda:885a`  | Realtek-referentiebord         | RTL8852AU  | Herkend    |
-| `0bda:885c`  | Realtek-referentiebord         | RTL8852AU  | Herkend    |
-| `0b05:1997`  | ASUS USB-AX56 (variant)        | RTL8852AU  | Herkend    |
-| `0b05:1a62`  | ASUS USB-AX56 (zonder dock)    | RTL8832AU  | Herkend    |
-| `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Herkend    |
-| `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Herkend    |
-| `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Herkend    |
-| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Herkend    |
-| `35bc:0100`  | TP-Link AX1800 (generiek)      | RTL8852AU  | Herkend    |
-| `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest** |
-| `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend    |
-| `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend    |
-| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Herkend    |
-| `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Herkend    |
+| USB-ID       | Apparaat                       | Chipset    | Status              |
+|--------------|--------------------------------|------------|---------------------|
+| `0bda:8832`  | Realtek-referentiebord         | RTL8832AU  | **Getest** (melder) |
+| `0bda:885a`  | Realtek-referentiebord         | RTL8852AU  | Herkend             |
+| `0bda:885c`  | Realtek-referentiebord         | RTL8852AU  | Herkend             |
+| `0b05:1997`  | ASUS USB-AX56 (variant)        | RTL8852AU  | Herkend             |
+| `0b05:1a62`  | ASUS USB-AX56 (zonder dock)    | RTL8832AU  | Herkend             |
+| `0411:0312`  | Buffalo WI-U3-1200AX2(/N)      | RTL8852AU  | Herkend             |
+| `2001:0141`  | D-Link DWA-X1850               | RTL8852AU  | Herkend             |
+| `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Herkend             |
+| `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Herkend             |
+| `35bc:0100`  | TP-Link AX1800 (generiek)      | RTL8852AU  | Herkend             |
+| `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest**          |
+| `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
+| `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
+| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Herkend             |
+| `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Herkend             |
 
-**Getest** betekent dat de maintainer op die specifieke adapter de
-binding, associatie en daadwerkelijk verkeer heeft geverifieerd.
+**Getest** betekent dat op die specifieke adapter de binding, associatie
+en daadwerkelijk verkeer zijn geverifieerd. Het achtervoegsel *(melder)*
+geeft aan dat die verificatie van de indiener van het hardwareverzoek
+komt en niet van de maintainer — voor `0bda:8832` is dat bewijs de
+volledige testsuite-run in
+[#43](https://github.com/WimLee115/rtl8852au-build/issues/43).
 **Herkend** betekent dat de USB-ID in de driver staat en de chipset
 klopt, maar dat een volledige end-to-end-check nog openstaat.
 
