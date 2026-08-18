@@ -37,9 +37,11 @@ if [[ $# -eq 0 ]]; then
     exit 2
 fi
 
-# Budget for this script as a whole. Sized to fail loudly well inside the
-# tightest apt-using job timeout (20 minutes) with room to spare for the build
-# that follows.
+# Budget for this script as a whole. The effective ceiling is 650s rather than
+# 600: the last attempt is clamped to whatever is left of the budget, and then
+# adds the 30s `timeout --kill-after` grace and the 20s second backoff on top.
+# Sized to fail loudly well inside the tightest apt-using job timeout (20
+# minutes) with room to spare for the build that follows.
 TOTAL_BUDGET="${APT_TOTAL_BUDGET:-600}"
 
 # Per-attempt ceilings. Healthy runs finish update+install in 9-135s, so these
