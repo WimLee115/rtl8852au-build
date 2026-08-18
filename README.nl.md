@@ -235,12 +235,17 @@ run wordt een JSON-rapport weggeschreven naar
 
 ```bash
 sudo ./tests/run_tests.sh                # veilig, niet-destructief
+     ./tests/run_tests.sh --offline      # alleen parsing — geen adapter, geen root
 sudo ./tests/run_tests.sh --module       # module + binding (read-only)
 sudo ./tests/run_tests.sh --interface    # ifup/ifdown + cfg80211-queries
 sudo ./tests/run_tests.sh --scan         # iw-scan trigger + dump
 sudo ./tests/run_tests.sh --usb          # USB-endpoint + snelheid
 sudo ./tests/run_tests.sh --dmesg        # kernel-log scannen op fouten
 ```
+
+De suite zoekt de module zelf op: een in-tree build in de repo-root
+krijgt voorrang, anders valt hij terug op wat `modprobe` zou laden,
+zodat een DKMS-installatie getest wordt zoals hij geïnstalleerd is.
 
 De destructieve klassen (`TestModuleReload`, `TestStability`) halen
 de module weg en wisselen de interface snel op en af. Ze zijn opt-in

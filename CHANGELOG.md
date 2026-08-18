@@ -13,6 +13,38 @@ changes in this file.
   for this repository; its CI compile-check, its ruff per-file ignore and its
   entry in the architecture docs are removed along with it.
 
+### Fixed
+- **The test suite no longer fails on a working DKMS install.**
+  `tests/test_driver.py` hard-coded the module path to `<repo>/8852au.ko`, so
+  anyone who installed with `./dkms-install.sh` — the method the README
+  recommends — failed `test_01_module_file_exists`, `test_02_module_info` and
+  `test_04_module_srcversion_matches` purely because the module was in
+  `/lib/modules/<release>/updates/dkms/` instead, and xz-compressed. The path
+  is now resolved at run time: an in-tree build first (so a stale build still
+  reports a real srcversion mismatch), then `modinfo -n`, then the DKMS
+  directory. `TestModuleReload` picks `insmod` or `modprobe` accordingly,
+  since `insmod` cannot load a compressed module.
+- **Adapters behind a USB hub are recognised as bound.** `test_01_device_bound`
+  matched sysfs entries against `\d+-\d+:\d+\.\d+`, which only covers a device
+  on a root port. Behind a hub the port path is dot-separated (`1-8.4:1.0`,
+  and `2-1.4.3:1.0` behind chained hubs), so a correctly bound adapter was
+  reported as "No USB devices bound to driver". The failure message now also
+  lists what the directory actually contained.
+- **An empty scan result no longer reports as a failure.**
+  `test_02_iw_scan_results` failed whenever no AP was in range. Zero BSSes is
+  not evidence of a driver fault — an rfkill block or a shielded room produce
+  the same result — so the test now hard-fails only when the scan mechanism
+  itself errors, and skips with the reason otherwise.
+- Reported in [#43](https://github.com/WimLee115/rtl8852au-build/issues/43),
+  where all five failures against a working `0bda:8832` adapter turned out to
+  be test-suite artefacts rather than driver faults.
+
+### Added
+- `TestSysfsParsing`, a hardware-free test class covering the sysfs and
+  module-path parsing above, and a CI step that runs it. Every other class in
+  the suite needs a physical adapter, so this logic previously had no
+  automated coverage at all.
+
 ## [1.16.0] — 2026-08-01
 
 First release under the fork's **own SemVer line**.

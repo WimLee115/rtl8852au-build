@@ -5,6 +5,7 @@
 #
 # Usage:
 #   sudo ./tests/run_tests.sh                # safe tests only (default)
+#        ./tests/run_tests.sh --offline      # parsing tests only (no hardware, no root)
 #   sudo ./tests/run_tests.sh --module       # module load + binding (read-only)
 #   sudo ./tests/run_tests.sh --interface    # interface up/down + cfg80211
 #   sudo ./tests/run_tests.sh --scan         # iw scan trigger + dump
@@ -48,6 +49,12 @@ FILTER=""
 DESTRUCTIVE=0
 
 case "${1:-}" in
+    --offline)
+        # Pure parsing logic — needs neither an adapter nor root, so it is
+        # the one selection that is meaningful on any machine (and the one
+        # CI runs).
+        FILTER="TestSysfsParsing"
+        ;;
     --module|--load)
         FILTER="TestModuleBasics TestDeviceBinding"
         ;;
@@ -95,7 +102,9 @@ case "${1:-}" in
         : # safe default: run everything except destructive classes
         ;;
     -h|--help)
-        sed -n '3,28p' "$0"
+        # Header block only — it ends at the SPDX line, and the previous
+        # bound ran five lines past it into the code.
+        sed -n '3,24p' "$0"
         exit 0
         ;;
     *)

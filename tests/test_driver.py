@@ -29,11 +29,24 @@ import re
 import json
 import unittest
 import glob
+from functools import lru_cache
 
 MODULE_NAME = "8852au"
-MODULE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), f"{MODULE_NAME}.ko")
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DRIVER_NAME = "rtl8852au"
 EXPECTED_CHIP_ID = 0x50  # RTL8852A
+
+# Modules may be installed compressed — DKMS on Debian/Kali writes
+# 8852au.ko.xz. modinfo and modprobe read those transparently; insmod does
+# not, so the reload test has to pick its loader based on the suffix.
+MODULE_SUFFIXES = (".ko", ".ko.xz", ".ko.gz", ".ko.zst")
+
+# A bound USB interface appears in /sys/bus/usb/drivers/<drv>/ as
+# <bus>-<port-path>:<config>.<interface>. The port path is dot-separated and
+# nests one level per hub: "1-2:1.0" on a root port, "1-8.4:1.0" behind one
+# hub, "2-1.4.3:1.0" behind two. The same directory also holds bind, unbind,
+# uevent, module, new_id and remove_id, which this pattern excludes.
+USB_INTERFACE_RE = re.compile(r'\d+-\d+(?:\.\d+)*:\d+\.\d+\Z')
 
 DESTRUCTIVE_REASON = (
     "destructive test (rmmod / rapid toggle) — opt in with --destructive "
@@ -59,6 +72,69 @@ def run(cmd, timeout=30, check=False):
 
 def is_root():
     return os.geteuid() == 0
+
+
+@lru_cache(maxsize=None)
+def find_module_file():
+    """Locate the .ko to inspect, or None if there is none.
+
+    Three sources, in the order that matches intent:
+
+    1. An in-tree build in the repo root. If you just ran `make`, that is the
+       module you mean, and a srcversion mismatch against the loaded one is a
+       real finding rather than noise.
+    2. Whatever modprobe would load (`modinfo -n`). This is the normal case
+       for anyone who installed with ./dkms-install.sh, where the module
+       lives in /lib/modules/<release>/updates/dkms/ and is xz-compressed.
+    3. A direct glob of that DKMS directory, for systems where modinfo cannot
+       resolve the name.
+
+    Before this, the path was hard-coded to <repo>/8852au.ko, so a DKMS
+    install — the method the README recommends — failed three tests purely
+    because the file was somewhere else (issue #43).
+    """
+    for suffix in MODULE_SUFFIXES:
+        candidate = os.path.join(REPO_ROOT, f"{MODULE_NAME}{suffix}")
+        if os.path.isfile(candidate):
+            return candidate
+
+    rc, out, _ = run(f"modinfo -n {MODULE_NAME}")
+    if rc == 0 and out and os.path.isfile(out):
+        return out
+
+    _, kver, _ = run("uname -r")
+    if kver:
+        matches = sorted(glob.glob(
+            f"/lib/modules/{kver}/updates/dkms/{MODULE_NAME}.ko*"))
+        if matches:
+            return matches[0]
+
+    return None
+
+
+def module_is_insmodable(path):
+    """insmod takes only an uncompressed .ko; modprobe handles the rest."""
+    return bool(path) and path.endswith(".ko")
+
+
+def bound_usb_interfaces(entries):
+    """Filter sysfs driver-directory entries down to bound USB interfaces.
+
+    Split out from the test so the hub-path handling can be verified without
+    hardware — see TestSysfsParsing.
+    """
+    return [e for e in entries if USB_INTERFACE_RE.match(e)]
+
+
+def rf_blocked():
+    """True when rfkill reports a soft or hard block on a wireless device."""
+    rc, out, _ = run("rfkill list wifi", timeout=5)
+    if rc != 0 or not out:
+        return False
+    return any(
+        line.strip().lower().endswith("blocked: yes")
+        for line in out.splitlines()
+    )
 
 
 def get_wlan_interface():
@@ -123,29 +199,90 @@ def safety_preflight(require_disconnected=True):
     return problems
 
 
+class TestSysfsParsing(unittest.TestCase):
+    """Test 0: pure parsing helpers — no hardware, no root, runs in CI.
+
+    These guard the two assumptions that made a working adapter look broken
+    in issue #43: how a bound USB interface is spelled in sysfs, and where an
+    installed module file lives.
+    """
+
+    def test_01_device_on_root_port(self):
+        """An adapter plugged straight into a root port counts as bound."""
+        self.assertEqual(bound_usb_interfaces(["1-2:1.0"]), ["1-2:1.0"])
+
+    def test_02_device_behind_hub(self):
+        """Regression (issue #43): an adapter behind a USB hub counts too.
+
+        Its port path is dot-separated ("1-8.4:1.0"), and one hub level is
+        not the limit — chained hubs nest further ("2-1.4.3:1.0"). The old
+        pattern (\\d+-\\d+:\\d+\\.\\d+) matched neither, so a perfectly bound
+        device reported "No USB devices bound to driver".
+        """
+        entries = ["1-8.4:1.0", "2-1.4.3:1.0"]
+        self.assertEqual(bound_usb_interfaces(entries), entries)
+
+    def test_03_housekeeping_entries_ignored(self):
+        """bind/unbind/uevent/module/new_id/remove_id are not devices."""
+        entries = ["bind", "unbind", "uevent", "module", "new_id", "remove_id"]
+        self.assertEqual(bound_usb_interfaces(entries), [])
+
+    def test_04_mixed_directory(self):
+        """A realistic listing yields only the interface entries."""
+        entries = ["bind", "1-8.4:1.0", "module", "uevent", "1-8.4:1.1"]
+        self.assertEqual(bound_usb_interfaces(entries),
+                         ["1-8.4:1.0", "1-8.4:1.1"])
+
+    def test_05_near_misses_rejected(self):
+        """Partial matches must not slip through.
+
+        re.match() only anchors the start, which is why the pattern carries
+        an explicit \\Z — otherwise "1-2:1.0.backup" would count as a device.
+        """
+        for entry in ["1-2:1.0.backup", "1-2:1", "x1-2:1.0", "1-:1.0", "1-2.:1.0"]:
+            with self.subTest(entry=entry):
+                self.assertEqual(bound_usb_interfaces([entry]), [])
+
+    def test_06_insmod_only_takes_uncompressed(self):
+        """DKMS ships 8852au.ko.xz; insmod cannot load a compressed module."""
+        self.assertIn(".ko.xz", MODULE_SUFFIXES)
+        self.assertTrue(module_is_insmodable("/lib/modules/x/8852au.ko"))
+        self.assertFalse(module_is_insmodable("/lib/modules/x/8852au.ko.xz"))
+        self.assertFalse(module_is_insmodable(None))
+
+
 class TestModuleBasics(unittest.TestCase):
     """Test 1: Module load/unload and basic registration."""
 
     def test_01_module_file_exists(self):
-        """Verify the compiled .ko file exists."""
-        self.assertTrue(os.path.isfile(MODULE_PATH),
-                        f"Module file not found: {MODULE_PATH}")
+        """Verify a built or installed module file can be located."""
+        path = find_module_file()
+        self.assertIsNotNone(
+            path,
+            f"No {MODULE_NAME} module found — neither an in-tree build in "
+            f"{REPO_ROOT} nor an installed one (modprobe / DKMS). Build it "
+            f"with `make`, or install it with ./dkms-install.sh.",
+        )
+        self.assertTrue(os.path.isfile(path), f"Module file not found: {path}")
 
     def test_02_module_info(self):
         """Verify modinfo reports correct metadata."""
-        rc, out, _ = run(f"modinfo {MODULE_PATH}")
-        self.assertEqual(rc, 0, "modinfo failed")
+        path = find_module_file()
+        if not path:
+            self.skipTest("no module file to inspect (see test_01)")
+        rc, out, _ = run(f"modinfo {path}")
+        self.assertEqual(rc, 0, f"modinfo failed for {path}")
         # modinfo reports the module name (8852au) and the Realtek description;
         # the "rtl8852au" string only appears in the sysfs driver name, not in
         # modinfo output. Match either signal.
-        lower = out.lower()
+        named = re.search(rf'^name:\s+{re.escape(MODULE_NAME)}\b', out, re.M)
         self.assertTrue(
-            f"name:           {MODULE_NAME}" in lower or "realtek" in lower,
+            named or "realtek" in out.lower(),
             f"Module name '{MODULE_NAME}' / 'realtek' not found in modinfo",
         )
         self.assertIn("vermagic:", out, "No vermagic in modinfo")
         # Verify kernel version matches
-        rc2, kver, _ = run("uname -r")
+        _, kver, _ = run("uname -r")
         self.assertIn(kver, out,
                        f"Module vermagic doesn't match kernel {kver}")
 
@@ -155,9 +292,12 @@ class TestModuleBasics(unittest.TestCase):
                         f"Module {MODULE_NAME} is not loaded")
 
     def test_04_module_srcversion_matches(self):
-        """Verify loaded module matches our built .ko file."""
-        rc1, built_src, _ = run(f"modinfo -F srcversion {MODULE_PATH}")
-        self.assertEqual(rc1, 0)
+        """Verify loaded module matches the built/installed .ko file."""
+        path = find_module_file()
+        if not path:
+            self.skipTest("no module file to compare against (see test_01)")
+        rc1, built_src, _ = run(f"modinfo -F srcversion {path}")
+        self.assertEqual(rc1, 0, f"modinfo -F srcversion failed for {path}")
         loaded_src_path = f"/sys/module/{MODULE_NAME}/srcversion"
         self.assertTrue(os.path.exists(loaded_src_path),
                         "Module srcversion sysfs entry not found")
@@ -182,10 +322,16 @@ class TestDeviceBinding(unittest.TestCase):
     def test_01_device_bound(self):
         """Verify at least one USB device is bound to our driver."""
         driver_dir = f"/sys/bus/usb/drivers/{DRIVER_NAME}"
-        bound = [f for f in os.listdir(driver_dir)
-                 if re.match(r'\d+-\d+:\d+\.\d+', f)]
-        self.assertGreater(len(bound), 0,
-                           "No USB devices bound to driver")
+        if not os.path.isdir(driver_dir):
+            self.fail(f"Driver {DRIVER_NAME} not registered in sysfs "
+                      f"({driver_dir} does not exist)")
+        entries = os.listdir(driver_dir)
+        bound = bound_usb_interfaces(entries)
+        self.assertGreater(
+            len(bound), 0,
+            f"No USB devices bound to driver. Entries in {driver_dir}: "
+            f"{sorted(entries)}",
+        )
 
     def test_02_wlan_interface_exists(self):
         """Verify a wlan interface was created for the device."""
@@ -264,16 +410,31 @@ class TestWiFiScan(unittest.TestCase):
                       f"Scan trigger failed: rc={rc} err={err}")
 
     def test_02_iw_scan_results(self):
-        """Verify scan returns results."""
-        # Trigger and wait
+        """Verify scan returns results.
+
+        Zero BSSes is not evidence of a driver fault: an rfkill block, a
+        shielded room or simply no AP within range all produce an empty dump.
+        So the hard assertion is on the scan mechanism working (dump exits
+        clean); an empty-but-successful scan skips with the reason instead of
+        reporting a failure the reader then has to talk themselves out of.
+        """
         run(f"iw dev {self.iface} scan trigger", timeout=10)
         time.sleep(5)
         rc, out, err = run(f"iw dev {self.iface} scan dump", timeout=15)
         self.assertEqual(rc, 0, f"Scan dump failed: {err}")
-        # Check for at least one BSS
+
         bss_count = out.count("BSS ")
-        self.assertGreater(bss_count, 0,
-                           "No access points found in scan results")
+        if bss_count == 0:
+            if rf_blocked():
+                self.skipTest(
+                    "rfkill reports a block — the radio is off, so no scan "
+                    "result is possible. Unblock with: sudo rfkill unblock wifi"
+                )
+            self.skipTest(
+                "scan ran cleanly but returned no BSS — no AP in range, or a "
+                "shielded environment. Re-run within range of an AP to "
+                "exercise this path."
+            )
 
     def test_03_supported_bands(self):
         """Verify driver reports supported frequency bands."""
@@ -442,11 +603,19 @@ class TestModuleReload(unittest.TestCase):
 
         self.assertFalse(module_loaded(), "Module still loaded after rmmod")
 
-        rc, _, err = run(f"insmod {MODULE_PATH}", timeout=15)
-        self.assertEqual(rc, 0, f"insmod failed: {err}")
+        # Reload via whichever loader can actually read the file we found. A
+        # DKMS install leaves an xz-compressed module, and insmod cannot load
+        # that — it takes an uncompressed .ko only.
+        path = find_module_file()
+        if module_is_insmodable(path):
+            reload_cmd = f"insmod {path}"
+        else:
+            reload_cmd = f"modprobe {MODULE_NAME}"
+        rc, _, err = run(reload_cmd, timeout=15)
+        self.assertEqual(rc, 0, f"`{reload_cmd}` failed: {err}")
         time.sleep(4)
 
-        self.assertTrue(module_loaded(), "Module not loaded after insmod")
+        self.assertTrue(module_loaded(), f"Module not loaded after `{reload_cmd}`")
 
         iface_after = get_wlan_interface()
         self.assertIsNotNone(iface_after,
