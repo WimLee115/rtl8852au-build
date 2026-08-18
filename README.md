@@ -224,12 +224,17 @@ report is written to `tests/test_report.json` after each run.
 
 ```bash
 sudo ./tests/run_tests.sh                # safe, non-destructive
+     ./tests/run_tests.sh --offline      # parsing only — no adapter, no root
 sudo ./tests/run_tests.sh --module       # module + binding (read-only)
 sudo ./tests/run_tests.sh --interface    # ifup/ifdown + cfg80211 queries
 sudo ./tests/run_tests.sh --scan         # iw scan trigger + dump
 sudo ./tests/run_tests.sh --usb          # USB endpoint + speed
 sudo ./tests/run_tests.sh --dmesg        # kernel log scan for errors
 ```
+
+The suite locates the module itself: an in-tree build in the repo root
+takes precedence, otherwise it falls back to whatever `modprobe` would
+load, so a DKMS install is tested as installed.
 
 The destructive classes (`TestModuleReload`, `TestStability`) tear
 down the module and rapidly cycle the interface. They are opt-in and

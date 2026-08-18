@@ -239,3 +239,13 @@ jobs:
         run: |
           # Verify the test suite imports and discovers tests cleanly.
           python -c "import tests.test_driver; print('OK:', len([c for c in dir(tests.test_driver) if c.startswith('Test')]), 'test classes')"
+
+      - name: Run offline unit tests (no hardware)
+        run: |
+          # TestSysfsParsing is pure parsing logic with no hardware or root
+          # requirement, so CI can actually run it rather than just import it.
+          # It pins how a bound USB interface is spelled in sysfs (hub port
+          # paths are dot-separated) and how a compressed DKMS module is
+          # handled — both regressed silently before, because every other test
+          # in this suite needs an adapter to say anything at all.
+          python -m unittest tests.test_driver.TestSysfsParsing -v
