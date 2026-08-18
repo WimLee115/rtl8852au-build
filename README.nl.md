@@ -437,6 +437,9 @@ Zoals bij elke out-of-tree-kernelmodule wordt de software
   Archer TX35U Plus USB-ID en de kernel 6.8-buildfix (PR #3).
 - **[74Thirsty (`gadgetsaavy`)](https://github.com/74Thirsty)** — D-Link
   DWA-1850 USB-ID `2001:332c` en testen op Parrot OS 6/7 (PR #14).
+- **[Omelug](https://github.com/Omelug)** — hardwarerapport voor
+  `0bda:8832` dat de bugs met het DKMS-modulepad en USB-hub-binding in
+  de test suite aan het licht bracht (issue #43).
 - **[WimLee115](https://github.com/WimLee115)** — fork-onderhoud,
   kernel-compatibiliteit-patches, test suite, dashboard.
 
