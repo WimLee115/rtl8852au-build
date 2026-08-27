@@ -234,10 +234,13 @@ host-specifiek token dat bij de eerste run wordt gegenereerd en als
 `0600` wordt opgeslagen in `~/.config/rtl8852au/dashboard.token`.
 
 ```bash
-pip install --require-hashes -r dashboard/requirements.txt
-sudo python3 dashboard/app.py
+python3 -m venv .venv && .venv/bin/pip install --require-hashes -r dashboard/requirements.txt
+sudo ./.venv/bin/python3 dashboard/app.py
 # Open de getoonde URL; gebruikersnaam wordt genegeerd, wachtwoord = het token hierboven.
 ```
+
+Een venv is verplicht op Debian/Kali: de systeem-Python is
+externally-managed (PEP 668) en weigert een kale `pip install`.
 
 Met `--host 0.0.0.0` stel je het dashboard bloot aan het LAN. Het
 auth-token is dan het enige dat tussen het netwerk en root-acties op

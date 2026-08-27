@@ -32,14 +32,17 @@ common scenarios.
 
 ## First-time setup
 
-1. Install dependencies (one-off, hash-locked):
+1. Install dependencies (one-off, hash-locked) into a virtual
+   environment. Debian/Kali's system Python is externally-managed
+   (PEP 668) and refuses a bare `pip install`:
    ```bash
-   pip install --require-hashes -r dashboard/requirements.txt
+   python3 -m venv .venv
+   .venv/bin/pip install --require-hashes -r dashboard/requirements.txt
    ```
-2. Start the dashboard. It needs root to call `iw`, `wpa_supplicant`,
-   `modprobe`, and `dhclient`:
+2. Start the dashboard with that same interpreter. It needs root to
+   call `iw`, `wpa_supplicant`, `modprobe`, and `dhclient`:
    ```bash
-   sudo python3 dashboard/app.py
+   sudo ./.venv/bin/python3 dashboard/app.py
    ```
 3. The first run generates an auth token in
    `~/.config/rtl8852au/dashboard.token` (mode `0600`). The token
@@ -345,7 +348,7 @@ sudo fuser -k 8080/tcp
 Or run the new instance on a different port:
 
 ```bash
-sudo python3 dashboard/app.py --port 9090
+sudo ./.venv/bin/python3 dashboard/app.py --port 9090
 ```
 
 **The browser keeps asking for login on every refresh**

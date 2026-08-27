@@ -33,14 +33,17 @@ een aantal veelvoorkomende scenario's.
 
 ## Eerste keer opzetten
 
-1. Installeer afhankelijkheden (eenmalig, hash-locked):
+1. Installeer afhankelijkheden (eenmalig, hash-locked) in een virtuele
+   omgeving. De systeem-Python van Debian/Kali is externally-managed
+   (PEP 668) en weigert een kale `pip install`:
    ```bash
-   pip install --require-hashes -r dashboard/requirements.txt
+   python3 -m venv .venv
+   .venv/bin/pip install --require-hashes -r dashboard/requirements.txt
    ```
-2. Start het dashboard. Het heeft root nodig om `iw`,
-   `wpa_supplicant`, `modprobe` en `dhclient` aan te roepen:
+2. Start het dashboard met diezelfde interpreter. Het heeft root nodig
+   om `iw`, `wpa_supplicant`, `modprobe` en `dhclient` aan te roepen:
    ```bash
-   sudo python3 dashboard/app.py
+   sudo ./.venv/bin/python3 dashboard/app.py
    ```
 3. De eerste start genereert een auth-token in
    `~/.config/rtl8852au/dashboard.token` (mode `0600`). Het token
@@ -355,7 +358,7 @@ sudo fuser -k 8080/tcp
 Of draai het nieuwe exemplaar op een andere poort:
 
 ```bash
-sudo python3 dashboard/app.py --port 9090
+sudo ./.venv/bin/python3 dashboard/app.py --port 9090
 ```
 
 **De browser blijft elke refresh om login vragen**

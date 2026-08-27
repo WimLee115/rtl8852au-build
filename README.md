@@ -222,10 +222,13 @@ Basic Auth — the password is a per-host token generated on first run
 and stored as mode `0600` in `~/.config/rtl8852au/dashboard.token`.
 
 ```bash
-pip install --require-hashes -r dashboard/requirements.txt
-sudo python3 dashboard/app.py
+python3 -m venv .venv && .venv/bin/pip install --require-hashes -r dashboard/requirements.txt
+sudo ./.venv/bin/python3 dashboard/app.py
 # Open the printed URL; username is ignored, password = the printed token.
 ```
+
+A venv is required on Debian/Kali: the system Python is
+externally-managed (PEP 668) and refuses a bare `pip install`.
 
 Pass `--host 0.0.0.0` to expose the dashboard to the LAN. The auth
 token is then the only thing standing between the network and

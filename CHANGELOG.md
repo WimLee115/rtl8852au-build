@@ -83,7 +83,16 @@ changes in this file.
   macro, which is correct on every kernel version because those were always
   flexible array members and never counted toward `sizeof`. Verified with a
   clean build and a real DKMS autoinstall against Linux
-  `7.1.5+kali-amd64` headers. Of the four blockers a 2026-08-18 probe found
+  `7.1.5+kali-amd64` headers, and confirmed functionally on that kernel
+  against a real RTL8852AU adapter: `tests/run_tests.sh --scan`
+  (`TestWiFiScan`, 3/3 — scan trigger, scan results, supported bands), a
+  manual monitor-mode cycle (`iw` reports `type monitor`; a `tcpdump`
+  capture on the interface showed beacon/RTS/CTS/ACK/BA frames with correct
+  radiotap headers and zero kernel-side drops), and the full non-destructive
+  suite via the dashboard's *Run tests* control (26/30 passed, 0 failed, 0
+  errors; the 4 skips are the expected ones — the two destructive classes
+  opting out by default, `TestProcFS` with `CONFIG_PROC_DEBUG=n`, and one
+  scan pass that returned no BSS). Of the four blockers a 2026-08-18 probe found
   against 7.2, this closes two; the `strncpy` removal and a dropped wiphy
   flag did not reproduce on 7.1.5, so they sit somewhere between 7.1.0 and
   7.2 — exact boundary still unconfirmed.
@@ -98,6 +107,15 @@ changes in this file.
   from the network panel, kernel `6.8.0-138-generic`. The handler now falls
   through to the existing `send_disconnect` cleanup path, same as every
   other unrecoverable failure it handles (`core/rtw_mlme.c`).
+- **The dashboard install instructions failed outright on Debian/Kali.**
+  `pip install --require-hashes -r dashboard/requirements.txt` hit
+  `error: externally-managed-environment` (PEP 668) on any current
+  Debian/Kali Python, which refuses a system-wide `pip install` by
+  default. Both READMEs and `docs/dashboard(.nl).md` now create a venv
+  first (`python3 -m venv .venv`) and install/run through it; `.venv/` is
+  already covered by the blanket `.*` rule in `.gitignore`, so no rule
+  needed adding there. Found while live-testing the dashboard after the
+  kernel 7.1 fix above.
 - **CI no longer hangs on a stalled Ubuntu mirror.** The runners resolve
   archives through a mirrorlist; when the Azure mirror is unreachable, apt
   falls back to `archive.ubuntu.com`, where a connection can stall with the
