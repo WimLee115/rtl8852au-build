@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>rtl8852au-build — Linux WiFi 6 driver for Realtek RTL8852AU / RTL8832AU</title>
-<meta name="description" content="Out-of-tree Linux driver for Realtek RTL8852AU / RTL8832AU USB WiFi 6 (AX1800) adapters. Builds on kernel 6.1 → 7.0+, stable monitor mode, DKMS, dashboard, tested in CI.">
+<meta name="description" content="Out-of-tree Linux driver for Realtek RTL8852AU / RTL8832AU USB WiFi 6 (AX1800) adapters. Builds on kernel 6.1 → 7.1, stable monitor mode, DKMS, dashboard, tested in CI.">
 <meta name="theme-color" content="#0b1220">
 <link rel="canonical" href="https://wimlee115.github.io/rtl8852au-build/">
 <!-- Open Graph / Twitter -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="rtl8852au-build">
 <meta property="og:title" content="rtl8852au-build — Linux WiFi 6 driver for Realtek RTL8852AU / RTL8832AU">
-<meta property="og:description" content="An out-of-tree Realtek RTL8852AU/8832AU driver that actually builds on kernel 6.1 → 7.0+. Stable monitor mode, DKMS, a loopback dashboard, and a live test suite.">
+<meta property="og:description" content="An out-of-tree Realtek RTL8852AU/8832AU driver that actually builds on kernel 6.1 → 7.1. Stable monitor mode, DKMS, a loopback dashboard, and a live test suite.">
 <meta property="og:url" content="https://wimlee115.github.io/rtl8852au-build/">
 <meta property="og:image" content="https://wimlee115.github.io/rtl8852au-build/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="rtl8852au-build — Linux WiFi 6 driver for RTL8852AU / RTL8832AU">
-<meta name="twitter:description" content="A Realtek RTL8852AU/8832AU USB WiFi 6 driver that builds on kernel 6.1 → 7.0+. Stable monitor mode, DKMS, dashboard, CI-tested.">
+<meta name="twitter:description" content="A Realtek RTL8852AU/8832AU USB WiFi 6 driver that builds on kernel 6.1 → 7.1. Stable monitor mode, DKMS, dashboard, CI-tested.">
 <meta name="twitter:image" content="https://wimlee115.github.io/rtl8852au-build/og-image.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b1220'/%3E%3Cg fill='none' stroke='%2338bdf8' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='M8 19a11 11 0 0 1 16 0'/%3E%3Cpath d='M11.5 16a6.5 6.5 0 0 1 9 0'/%3E%3C/g%3E%3Ccircle cx='16' cy='22' r='2.4' fill='%23f5b953'/%3E%3C/svg%3E">
 <style>
@@ -329,7 +329,7 @@
   <div class="wrap hero-inner">
     <p class="eyebrow">Realtek RTL8852AU · RTL8832AU · 802.11ax</p>
     <h1 class="title" id="hero-title">The WiFi&nbsp;6 driver that<br><span class="hl">actually builds</span> on modern kernels.</h1>
-    <p class="lede">An out-of-tree Linux driver for USB adapters based on the Realtek <strong>RTL8852AU / RTL8832AU</strong> (WiFi&nbsp;6, AX1800) chipsets. The vendor source stopped compiling on recent kernels — this fork carries the version-gated patches that restore the build on <strong>kernel 6.1&nbsp;→&nbsp;7.0+</strong>, and fixes the monitor-mode crashes along the way.</p>
+    <p class="lede">An out-of-tree Linux driver for USB adapters based on the Realtek <strong>RTL8852AU / RTL8832AU</strong> (WiFi&nbsp;6, AX1800) chipsets. The vendor source stopped compiling on recent kernels — this fork carries the version-gated patches that restore the build on <strong>kernel 6.1&nbsp;→&nbsp;7.1</strong>, and fixes the monitor-mode crashes along the way.</p>
 
     <div class="hero-cta">
       <a class="btn btn-primary" href="#install">
@@ -355,13 +355,13 @@
     </div>
 
     <div class="chips">
-      <span class="chip"><b>kernel</b> 6.1&nbsp;→&nbsp;7.0+</span>
+      <span class="chip"><b>kernel</b> 6.1&nbsp;→&nbsp;7.1</span>
       <span class="chip"><b>license</b> GPL-2.0</span>
       <span class="chip"><b>DKMS</b> supported</span>
       <span class="chip"><b>monitor</b> stable</span>
       <span class="chip"><b>docs</b> EN / NL</span>
     </div>
-    <p class="microcopy">Independent community fork. Not affiliated with, endorsed by, or sponsored by Realtek Semiconductor Corp. or any hardware vendor named here. Kernel 7.1 is not yet supported — a tracked, in-progress port.</p>
+    <p class="microcopy">Independent community fork. Not affiliated with, endorsed by, or sponsored by Realtek Semiconductor Corp. or any hardware vendor named here. Kernel 7.2 is not yet supported — a tracked, in-progress port.</p>
   </div>
 </section>
 
@@ -374,7 +374,7 @@
       <p>Every claim below maps to a commit, a patch file in <code>patches/</code>, or a CI job — not marketing.</p>
     </div>
     <div class="why">
-      <div class="cell"><div class="n">12</div><div class="k">version-gated compatibility patches for kernel 6.1&nbsp;→&nbsp;7.0+</div></div>
+      <div class="cell"><div class="n">12</div><div class="k">version-gated compatibility patches for kernel 6.1&nbsp;→&nbsp;7.1</div></div>
       <div class="cell"><div class="n">4</div><div class="k">monitor-mode RX-path crash fixes (UAF, race, OOB, NULL-deref)</div></div>
       <div class="cell"><div class="n">15</div><div class="k">supported USB IDs across TP-Link, ASUS, D-Link, Buffalo, Elecom</div></div>
       <div class="cell"><div class="n">4×</div><div class="k">CI kernels: two distro + mainline stable &amp; longterm</div></div>
@@ -394,9 +394,9 @@
 
       <article class="tile">
         <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg></div>
-        <h3>Kernel 6.1 → 7.0+ compatibility</h3>
-        <p>Twelve compile-time fixes for the API removals and signature changes that broke the vendor tree — WEXT removal, <code>proc_ops</code>, <code>timer_setup</code>, the DMA API, <code>class_create</code>, and the cfg80211 channel-switch / MLO <code>radio_idx</code> refactor. Each gate keys off <code>LINUX_VERSION_CODE</code>.</p>
-        <span class="tag">Verified up to <b>Linux 7.0.12</b> · CI builds mainline stable + LTS</span>
+        <h3>Kernel 6.1 → 7.1 compatibility</h3>
+        <p>Twelve compile-time fixes for the API removals and signature changes that broke the vendor tree — WEXT removal, <code>proc_ops</code>, <code>timer_setup</code>, the DMA API, <code>class_create</code>, and the cfg80211 channel-switch / MLO <code>radio_idx</code> refactor — plus a version-gated port of nine more cfg80211 callbacks to <code>wireless_dev</code> and the pppoe struct changes that 7.1.0 brought. Each gate keys off <code>LINUX_VERSION_CODE</code>.</p>
+        <span class="tag">Verified up to <b>Linux 7.1.5</b> (build + DKMS install) · CI builds mainline stable + LTS</span>
       </article>
 
       <article class="tile">
@@ -530,7 +530,7 @@
       </details>
       <details>
         <summary>What kernel versions are supported? <span class="mk" aria-hidden="true">+</span></summary>
-        <div class="ans">Kernels <b>6.1 (LTS) through 7.0</b> build cleanly; every patch is gated on <code>LINUX_VERSION_CODE</code>, and CI compiles against distro kernels plus the newest mainline stable and longterm releases. <b>Kernel 7.1 is not yet supported</b> — it refactored a large set of <code>cfg80211_ops</code> callbacks from <code>net_device</code> to <code>wireless_dev</code>; a version-gated port is tracked as follow-up work.</div>
+        <div class="ans">Kernels <b>6.1 (LTS) through 7.1</b> build cleanly; every patch is gated on <code>LINUX_VERSION_CODE</code>, and CI compiles against distro kernels plus the newest mainline stable and longterm releases. Verified up to Linux 7.1.5, build and DKMS install both. <b>Kernel 7.2 is not yet supported</b> — a removed <code>strncpy</code> and a dropped wiphy flag still block it, somewhere between 7.1.0 and 7.2; a version-gated port is tracked as follow-up work.</div>
       </details>
       <details>
         <summary>Secure Boot rejects the module — now what? <span class="mk" aria-hidden="true">+</span></summary>

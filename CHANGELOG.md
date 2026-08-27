@@ -27,6 +27,13 @@ changes in this file.
   scheduled runs cluster and get delayed at `:00`.
 
 ### Changed
+- **Both READMEs and the project site now say kernel 7.1 builds.** The
+  kernel badge, compatibility table and CI notes moved from "verified up to
+  7.0.12, 7.1 does not build" to "verified up to 7.1.5" now that the
+  cfg80211/pppoe fix above closes the two blockers that actually hit that
+  kernel. The remaining two blockers (`strncpy`, the dropped wiphy flag)
+  are reattributed to "somewhere between 7.1.0 and 7.2" instead of being
+  listed as reasons 7.1 fails, since neither reproduced on 7.1.5.
 - **`0bda:8832` (Realtek RTL8832AU reference board) moves from
   Recognised to Tested (reported)** in the supported-devices table.
   The reporter in
@@ -61,6 +68,36 @@ changes in this file.
   run behind an apt step on a different runner.
 
 ### Fixed
+- **Kernel 7.1.0 broke the cfg80211 station/key callbacks and the pppoe
+  bridge-extension code.** Nine `cfg80211_ops` callbacks (`add_key`,
+  `get_key`, `del_key`, `set_default_mgmt_key`, `get_station`,
+  `add_station`, `del_station`, `change_station`, `dump_station`) and the
+  three call sites of `cfg80211_new_sta`/`cfg80211_del_sta` switched from a
+  `net_device *` to a `struct wireless_dev *` parameter; each is now
+  version-gated on `LINUX_VERSION_CODE >= KERNEL_VERSION(7, 1, 0)`, deriving
+  `net_device` from `wdev->netdev` so the function bodies stay unchanged
+  (`os_dep/linux/ioctl_cfg80211.c`). The same kernel dropped
+  `pppoe_hdr.tag`/`pppoe_tag.tag_data` from kernel-visible headers; the two
+  direct field accesses in `core/rtw_br_ext.c` are replaced with pointer
+  arithmetic on `sizeof(struct pppoe_hdr)` / the existing `TAG_HDR_LEN`
+  macro, which is correct on every kernel version because those were always
+  flexible array members and never counted toward `sizeof`. Verified with a
+  clean build and a real DKMS autoinstall against Linux
+  `7.1.5+kali-amd64` headers. Of the four blockers a 2026-08-18 probe found
+  against 7.2, this closes two; the `strncpy` removal and a dropped wiphy
+  flag did not reproduce on 7.1.5, so they sit somewhere between 7.1.0 and
+  7.2 — exact boundary still unconfirmed.
+- **A stale connect message could crash on a freed `phl_role`.**
+  `_connect_msg_hdlr()` read `padapter->phl_role` and immediately
+  dereferenced it (`role->hw_band`) before the switch on the message event,
+  with no NULL check — a later case in the same switch
+  (`MSG_EVT_SWCH_START`) already guarded against a NULL role, so the race
+  was known but not closed at this earlier point. Reported in
+  [#52](https://github.com/WimLee115/rtl8852au-build/issues/52): TP-Link
+  Archer TX35U Plus, two failed WPA attempts followed by turning WiFi off
+  from the network panel, kernel `6.8.0-138-generic`. The handler now falls
+  through to the existing `send_disconnect` cleanup path, same as every
+  other unrecoverable failure it handles (`core/rtw_mlme.c`).
 - **CI no longer hangs on a stalled Ubuntu mirror.** The runners resolve
   archives through a mirrorlist; when the Azure mirror is unreachable, apt
   falls back to `archive.ubuntu.com`, where a connection can stall with the

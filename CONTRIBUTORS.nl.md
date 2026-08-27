@@ -10,8 +10,9 @@ wordt automatisch gegenereerd uit de commit-historie.
 ## Maintainer
 
 - **[WimLee115](https://github.com/WimLee115)** — fork-onderhoud, de twaalf
-  kernel 6.1 → 7.0+ compatibiliteitspatches, de monitor-mode-crashfixes,
-  DKMS-packaging, het Flask-dashboard, de test suite en CI.
+  kernel 6.17+ compatibiliteitspatches, de kernel 7.1 cfg80211/pppoe-port,
+  de monitor-mode-crashfixes, DKMS-packaging, het Flask-dashboard, de test
+  suite en CI.
 
 ## Bijdragers
 

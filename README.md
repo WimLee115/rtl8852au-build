@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/WimLee115/rtl8852au-build?sort=semver&label=release&color=0a7ea4)](https://github.com/WimLee115/rtl8852au-build/releases/latest)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.0-informational.svg)](#compatibility)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.1-informational.svg)](#compatibility)
 [![License: GPL-2.0](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](LICENSE)
 [![DKMS](https://img.shields.io/badge/DKMS-supported-brightgreen.svg)](#dkms-install)
 [![WiFi 6](https://img.shields.io/badge/WiFi%206-AX1800-0a7ea4.svg)](#supported-devices)
@@ -29,12 +29,14 @@ upstream changes can be re-applied later.
   patches carry the vendor source across the 6.17+ API removals; CI
   compiles it against distro kernels *and* the latest kernel.org stable
   and longterm releases, so regressions on the supported line are caught
-  early. Verified up to **Linux 7.0.12**; **kernel 7.1 and newer do not
-  build yet**. A probe against 7.2 found four independent blockers, not
-  one: the cfg80211 callback refactor (net_device → wireless_dev), the
-  removal of `strncpy`, the reworked pppoe structs behind
-  `CONFIG_RTW_BR_EXT`, and a dropped wiphy flag. Each needs separate
-  porting work.
+  early. Verified up to **Linux 7.1.5** — a clean build plus a real DKMS
+  autoinstall. Kernel 7.1.0 broke the cfg80211 station/key callbacks
+  (`net_device` → `wireless_dev`) and the pppoe bridge-extension structs
+  behind `CONFIG_RTW_BR_EXT`; both are now version-gated fixes. Two more
+  blockers turned up in an earlier probe against 7.2 — the removal of
+  `strncpy` and a dropped wiphy flag — but neither reproduced on 7.1.5,
+  so they sit somewhere between 7.1.0 and 7.2. **Kernel 7.2 does not
+  build yet**; the exact boundary isn't pinned down.
 - **Monitor mode that stays up.** Four separate fixes for the RX-path
   crashes that plagued the vendor driver — UBSAN out-of-bounds, a
   NULL-deref, an SKB use-after-free, and a race/double-free — plus a
@@ -79,6 +81,12 @@ Relative to the Realtek vendor source `v1.15.0.1-2`:
   `proc_ops`, `ndo_get_stats64`, `timer_setup`, SKB header API, DMA
   API, USB pipe macros, `access_ok` arity, implicit fallthrough,
   `class_create` signature, cfg80211 channel-switch + MLO `radio_idx`).
+- **Kernel 7.1+ compatibility** — the cfg80211 `wireless_dev` refactor
+  across nine `cfg80211_ops` callbacks plus `cfg80211_new_sta`/
+  `cfg80211_del_sta` (`os_dep/linux/ioctl_cfg80211.c`), and the pppoe
+  tag-pointer rework behind `CONFIG_RTW_BR_EXT` (`core/rtw_br_ext.c`).
+  Version-gated on `LINUX_VERSION_CODE >= 7.1.0`; verified against
+  Linux 7.1.5.
 - **UBSAN array-out-of-bounds** fix on every WPA/WPA2 key operation
   (`include/ieee80211.h`).
 - **Monitor-mode NULL-deref, SKB use-after-free, race + double-free**
@@ -87,6 +95,10 @@ Relative to the Realtek vendor source `v1.15.0.1-2`:
   `netdev_close()` now takes `hw_init_mutex` symmetrically with
   `netdev_open()` and skips the disassoc cmd path when the device is
   surprise-removed (`os_dep/linux/os_intfs.c`).
+- **Stale connect-message crash on a freed `phl_role`** —
+  `_connect_msg_hdlr()` dereferenced the role before checking it was
+  still there; it now bails out to the existing disconnect-cleanup
+  path instead (`core/rtw_mlme.c`).
 - **Ethtool reports a real link speed** instead of `Speed: unknown`.
 - **USB IDs added** for adapters confirmed to use the RTL8852AU
   chipset (TP-Link TX20U Plus, TX35U Plus).
@@ -274,10 +286,11 @@ sudo ./tests/run_tests.sh --all          # everything, including destructive
 |----------------------------|--------------------|---------|---------------------|
 | Kali Linux Rolling 2026.1  | 6.19.14+kali-amd64 | x86_64  | Maintainer hardware |
 | Kali Linux Rolling         | 7.0.12+kali-amd64  | x86_64  | Maintainer build    |
+| Kali Linux Rolling         | 7.1.5+kali-amd64   | x86_64  | Maintainer build (DKMS install) |
 | Ubuntu 22.04 LTS           | distro default     | x86_64  | CI build matrix     |
 | Ubuntu 24.04 LTS           | distro default     | x86_64  | CI build matrix     |
 
-Other kernels in the 6.1 LTS → 7.0 range are expected to compile
+Other kernels in the 6.1 LTS → 7.1 range are expected to compile
 because every patch is gated on the relevant `LINUX_VERSION_CODE`, but
 they are not verified by the maintainer.
 
@@ -286,7 +299,9 @@ releases, resolved at run time, on every push *and* weekly on a schedule —
 so a new LTS that breaks the build surfaces the week it lands rather than
 whenever the next commit happens to arrive. Longterm is a hard gate;
 newest-stable is an informational early warning, and it is expected to fail
-for as long as the 7.x port is outstanding (7.2 at the time of writing).
+for as long as the 7.x port is outstanding — the `strncpy` removal and a
+dropped wiphy flag, somewhere between 7.1.0 and 7.2 (7.2 at the time of
+writing).
 
 ## Troubleshooting
 
