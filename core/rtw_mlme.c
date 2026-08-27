@@ -5433,6 +5433,10 @@ static enum phl_mdl_ret_code _connect_msg_hdlr(void* dispr, void* priv,
 	}
 
 	role = a->phl_role;
+	if (!role) {
+		RTW_ERR(FUNC_ADPT_FMT ": role == NULL\n", FUNC_ADPT_ARG(a));
+		goto send_disconnect;
+	}
 	SET_MSG_MDL_ID_FIELD(nextmsg.msg_id, PHL_FG_MDL_CONNECT);
 	nextmsg.band_idx = role->hw_band;
 
