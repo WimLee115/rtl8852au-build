@@ -438,6 +438,9 @@ driver-source patches. In short:
 - **[Omelug](https://github.com/Omelug)** — hardware report for
   `0bda:8832` that surfaced the DKMS module-path and USB-hub binding
   bugs in the test suite (issue #43).
+- **[PierreGrillet](https://github.com/PierreGrillet)** — crash reports
+  that surfaced the connect NULL-deref and beacon-pool atomic-free bugs
+  (issue #52).
 - **[WimLee115](https://github.com/WimLee115)** — fork maintenance,
   kernel-compatibility patches, test suite, dashboard.
 

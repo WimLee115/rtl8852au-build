@@ -29,6 +29,12 @@ wordt automatisch gegenereerd uit de commit-historie.
   ([issue #43](https://github.com/WimLee115/rtl8852au-build/issues/43)).
   Draaide de suite na de fix opnieuw en bevestigde associatie en monitor
   mode, waarmee die ID op *Getest (melder)* kwam.
+- **[PierreGrillet](https://github.com/PierreGrillet)** — crashrapporten op
+  een TP-Link Archer TX35U Plus die twee driverbugs aan het licht brachten:
+  een NULL-deref in de connect-statemachine op een verouderd bericht na een
+  mislukte WPA-poging, en een free in atomic context in de
+  beacon-pool-opruiming bij hardhandige USB-verwijdering tijdens AP-modus
+  ([issue #52](https://github.com/WimLee115/rtl8852au-build/issues/52)).
 
 ## Acknowledgements
 

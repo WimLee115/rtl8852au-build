@@ -7,6 +7,11 @@ changes in this file.
 
 ## [Unreleased]
 
+## [1.17.0] — 2026-08-29
+
+Extends kernel compatibility on top of `1.16.1`: kernel 7.1 support, two
+more MLME/HAL crash fixes, and CI hardened against silent failures.
+
 ### Added
 - **Every CI job now carries an explicit `timeout-minutes`** — 20 for the
   distro build matrix, 25 for `build-mainline`, 20 for the DKMS dry-run,
@@ -155,6 +160,27 @@ changes in this file.
   a missing or unreadable module exits 0 once piped into `head`, so that step
   could never fail either. It reads through `sed` now, which does not close the
   pipe early and therefore reports modinfo's real status.
+- **`hal_bcn_deinit()` freed beacon-pool memory while holding the pool's
+  spinlock.** Freeing goes through `_os_mem_free()`, which bottoms out in
+  `vfree()` on Linux — not safe to call from atomic context, and holding
+  `bcn_pool->bcn_lock` across the loop put every call there. `_os_mem_free()`
+  has its own `in_atomic()` guard for exactly this and dumps a stack trace
+  when it fires, but the explanatory `RTW_ERR()` line ahead of it compiles
+  out in a non-debug build (`CONFIG_RTW_DEBUG=0` is the Makefile default),
+  so only the bare trace reached dmesg. It only surfaces when a beacon
+  entry is still in the pool at teardown — what a surprise USB removal
+  during AP mode leaves behind, since a graceful AP-stop frees the entry
+  first via `rtw_free_bcn_entry()`. Reported in
+  [#52](https://github.com/WimLee115/rtl8852au-build/issues/52), same
+  thread as the connect-crash fix above: TP-Link Archer TX35U Plus, dongle
+  hard-unplugged while running as a hotspot, kernel `6.8.0-138-generic`.
+  Trace anchored at `hal_bcn_deinit+0xbe/0xc0`, called from
+  `rtw_hal_deinit` → `rtw_phl_deinit` → `rtw_hw_deinit` →
+  `rtw_dev_remove`. Harmless on that kernel — Ubuntu's generic config
+  doesn't enable `CONFIG_DEBUG_ATOMIC_SLEEP` — but freeing vmalloc memory
+  under a spinlock is broken regardless of whether a given config catches
+  it. Pool entries are now detached from the list under the lock and freed
+  after `_os_spinunlock` (`phl/hal_g6/hal_init.c`).
 
 ## [1.16.1] — 2026-08-18
 

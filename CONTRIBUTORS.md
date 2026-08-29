@@ -28,6 +28,12 @@ is generated automatically from commit history.
   unbound ([issue #43](https://github.com/WimLee115/rtl8852au-build/issues/43)).
   Re-ran the suite after the fix and confirmed association and monitor mode,
   which is what moved that ID to *Tested (reported)*.
+- **[PierreGrillet](https://github.com/PierreGrillet)** — crash reports on
+  a TP-Link Archer TX35U Plus that surfaced two driver bugs: a NULL-deref
+  in the connect state machine on a stale message after a failed WPA
+  attempt, and an atomic-context free in the beacon-pool cleanup on
+  surprise USB removal during AP mode
+  ([issue #52](https://github.com/WimLee115/rtl8852au-build/issues/52)).
 
 ## Acknowledgements
 

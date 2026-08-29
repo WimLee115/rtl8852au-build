@@ -473,6 +473,9 @@ Zoals bij elke out-of-tree-kernelmodule wordt de software
 - **[Omelug](https://github.com/Omelug)** — hardwarerapport voor
   `0bda:8832` dat de bugs met het DKMS-modulepad en USB-hub-binding in
   de test suite aan het licht bracht (issue #43).
+- **[PierreGrillet](https://github.com/PierreGrillet)** — crashrapporten
+  die de connect-NULL-deref en de beacon-pool-atomic-free-bug aan het
+  licht brachten (issue #52).
 - **[WimLee115](https://github.com/WimLee115)** — fork-onderhoud,
   kernel-compatibiliteit-patches, test suite, dashboard.
 
