@@ -179,7 +179,7 @@ USB-adapters gebaseerd op de **RTL8852AU**- of
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest**          |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
-| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Herkend             |
+| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | **Getest** (melder) |
 | `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Herkend             |
 
 **Getest** betekent dat op die specifieke adapter de binding, associatie
@@ -187,7 +187,11 @@ en daadwerkelijk verkeer zijn geverifieerd. Het achtervoegsel *(melder)*
 geeft aan dat die verificatie van de indiener van het hardwareverzoek
 komt en niet van de maintainer — voor `0bda:8832` is dat bewijs de
 volledige testsuite-run in
-[#43](https://github.com/WimLee115/rtl8852au-build/issues/43).
+[#43](https://github.com/WimLee115/rtl8852au-build/issues/43), en voor
+`3625:010f` is dat de AP-modus-associatie en bestandsoverdracht gemeld in
+[#52](https://github.com/WimLee115/rtl8852au-build/issues/52) — station-
+modus tegen een telefoon-hotspot is op dat apparaat nog onbevestigd, zie
+dat issue voor het lopende onderzoek.
 **Herkend** betekent dat de USB-ID in de driver staat en de chipset
 klopt, maar dat een volledige end-to-end-check nog openstaat.
 

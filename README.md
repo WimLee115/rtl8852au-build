@@ -171,14 +171,18 @@ table below is generated from `os_dep/linux/usb_intf.c`.
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested**            |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
-| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | Recognised            |
+| `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | **Tested** (reported) |
 | `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Recognised            |
 
 **Tested** means bind, association and traffic have been verified on
 that specific device. A *(reported)* suffix marks a device verified by
 the person who filed the hardware request rather than by the maintainer
 — for `0bda:8832` that evidence is the full test-suite run posted in
-[#43](https://github.com/WimLee115/rtl8852au-build/issues/43).
+[#43](https://github.com/WimLee115/rtl8852au-build/issues/43), and for
+`3625:010f` it's the AP-mode association and file transfer reported in
+[#52](https://github.com/WimLee115/rtl8852au-build/issues/52) — station
+mode against a phone hotspot is still unconfirmed on that device, see
+that issue for the ongoing troubleshooting.
 **Recognised** means the USB ID is in the driver and the chipset
 matches, but a full end-to-end check is pending.
 
