@@ -698,6 +698,9 @@ enum rtw_hal_status hal_bcn_deinit(struct hal_info_t *hal_info)
 	void *drv_priv = hal_to_drvpriv(hal_info);
 	struct bcn_entry_pool *bcn_pool = &hal_info->hal_com->bcn_pool;
 	struct rtw_bcn_entry *tmp_entry, *type = NULL;
+	_os_list free_list;
+
+	INIT_LIST_HEAD(&free_list);
 
 	_os_spinlock(drv_priv, &bcn_pool->bcn_lock, _ps, NULL);
 
@@ -705,10 +708,21 @@ enum rtw_hal_status hal_bcn_deinit(struct hal_info_t *hal_info)
 		struct rtw_bcn_entry, &bcn_pool->bcn_list, list)
 	{
 		list_del(&tmp_entry->list);
-		_os_mem_free(drv_priv, tmp_entry, sizeof(struct rtw_bcn_entry));
+		list_add_tail(&tmp_entry->list, &free_list);
 	}
 
 	_os_spinunlock(drv_priv, &bcn_pool->bcn_lock, _ps, NULL);
+
+	/* _os_mem_free() may free vmalloc'd memory, which must not happen
+	 * while bcn_lock (a spinlock) is held: detach entries under the
+	 * lock, free them after it's released.
+	 */
+	phl_list_for_loop_safe(tmp_entry, type,
+		struct rtw_bcn_entry, &free_list, list)
+	{
+		list_del(&tmp_entry->list);
+		_os_mem_free(drv_priv, tmp_entry, sizeof(struct rtw_bcn_entry));
+	}
 
 	return RTW_HAL_STATUS_SUCCESS;
 }
