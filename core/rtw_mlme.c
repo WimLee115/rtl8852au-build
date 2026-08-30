@@ -5303,12 +5303,25 @@ static void _connect_cmd_done(struct _ADAPTER *a)
 	}
 
 	_rtw_spinlock(&a->connect_st_lock);
-	status = rtw_phl_free_cmd_token(GET_PHL_INFO(d),
-					role->hw_band, &a->connect_token);
+	if (role) {
+		status = rtw_phl_free_cmd_token(GET_PHL_INFO(d),
+						role->hw_band, &a->connect_token);
+		if (status != RTW_PHL_STATUS_SUCCESS)
+			RTW_ERR(FUNC_ADPT_FMT ": free_cmd_token fail(0x%x)!\n",
+				FUNC_ADPT_ARG(a), status);
+	} else {
+		/* rtw_hw_iface_deinit() can clear a->phl_role concurrently
+		 * from netdev_close() while this dispatcher thread is still
+		 * processing a queued connect-module message for the same
+		 * adapter (same race as the monitor-mode radiotap fix in
+		 * #42). Without this check, the role->hw_band read in the
+		 * branch above dereferences NULL and panics the
+		 * share_thread_hdl kthread.
+		 */
+		RTW_ERR(FUNC_ADPT_FMT ": role == NULL, skip free_cmd_token\n",
+			FUNC_ADPT_ARG(a));
+	}
 	a->connect_token = 0;
-	if (status != RTW_PHL_STATUS_SUCCESS)
-		RTW_ERR(FUNC_ADPT_FMT ": free_cmd_token fail(0x%x)!\n",
-			FUNC_ADPT_ARG(a), status);
 	a->connect_state = CONNECT_ST_IDLE;
 	a->connect_abort = false;
 	_rtw_spinunlock(&a->connect_st_lock);

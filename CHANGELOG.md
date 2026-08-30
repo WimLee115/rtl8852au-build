@@ -7,6 +7,36 @@ changes in this file.
 
 ## [Unreleased]
 
+### Fixed
+- **`_connect_cmd_done()` had the same unguarded `phl_role` read that 1.17.0
+  fixed one level up.** 1.17.0 closed the NULL-`phl_role` race in
+  `_connect_msg_hdlr()`'s top-level dispatch, but `_connect_cmd_done()` —
+  called from three cases in that same switch (`MSG_EVT_CONNECT_END`,
+  `MSG_EVT_DISCONNECT`, and the `send_disconnect` fallback) — re-reads
+  `a->phl_role` on its own and dereferences `role->hw_band` with no check
+  of its own:
+  ```
+  BUG: kernel NULL pointer dereference, address: 000000000000001e
+  RIP: _connect_cmd_done+0x47/0x90 [8852au]
+  ```
+  Same hazard as before: `rtw_hw_iface_deinit()` frees the role and clears
+  `phl_role` from `netdev_close()` with no lock shared with the connect
+  dispatcher thread, so a queued connect-module message can still be
+  in flight against a role that was just freed. Matches the trigger and
+  hardware from [#52](https://github.com/WimLee115/rtl8852au-build/issues/52):
+  TP-Link Archer TX35U Plus (`3625:010f`), two failed WPA attempts against a
+  phone hotspot on 2.4GHz, WiFi switched off from the network panel
+  afterward, kernel `6.8.0-138-generic` — hit again after upgrading to
+  1.17.0 expecting the earlier fix to cover it. Now guarded the same way as
+  the rest of the switch: skip `rtw_phl_free_cmd_token()` and log instead of
+  dereferencing a NULL role, still clearing `connect_token`/`connect_state`
+  so the adapter doesn't get stuck (`core/rtw_mlme.c`). Build-verified clean
+  against Linux `7.1.5+kali-amd64` headers; no hardware to retest against in
+  this environment. The station-mode authentication failure that preceded
+  the crash (`CTRL-EVENT-ASSOC-REJECT status_code=1` against the phone
+  hotspot) is unrelated to this NULL deref and remains the open question in
+  #52.
+
 ## [1.17.0] — 2026-08-29
 
 Extends kernel compatibility on top of `1.16.1`: kernel 7.1 support, two
