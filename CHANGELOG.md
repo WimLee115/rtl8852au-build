@@ -31,11 +31,22 @@ changes in this file.
   the rest of the switch: skip `rtw_phl_free_cmd_token()` and log instead of
   dereferencing a NULL role, still clearing `connect_token`/`connect_state`
   so the adapter doesn't get stuck (`core/rtw_mlme.c`). Build-verified clean
-  against Linux `7.1.5+kali-amd64` headers; no hardware to retest against in
-  this environment. The station-mode authentication failure that preceded
-  the crash (`CTRL-EVENT-ASSOC-REJECT status_code=1` against the phone
-  hotspot) is unrelated to this NULL deref and remains the open question in
-  #52.
+  against Linux `7.1.5+kali-amd64` headers, and now field-verified on the
+  reporter's own `3625:010f` hardware: a `wpa_supplicant -dd` capture against
+  the same phone hotspot shows six consecutive `CTRL-EVENT-ASSOC-REJECT
+  status_code=1` attempts against the same BSSID — three times what used to
+  crash the kernel — with no `BUG` in dmesg, confirming the guard holds under
+  the exact failure pattern that found the bug. The station-mode
+  authentication failure itself is unchanged and remains the open question in
+  #52: every attempt is rejected at association, before the 4-way handshake,
+  so this is the hotspot declining the STA rather than a PSK/key problem.
+  Reading the request-building path (`_issue_assocreq()` in
+  `core/rtw_mlme_ext.c`, fed by the HT/VHT/HE/RSN restructuring in
+  `rtw_joinbss_cmd()`, `core/rtw_cmd.c`) found no malformed-IE cause — both
+  build the STA's own capability elements from local hardware state rather
+  than echoing the AP's, so the next step is an over-the-air capture of the
+  actual association exchange, which `wpa_supplicant`'s log can't show on its
+  own.
 
 ## [1.17.0] — 2026-08-29
 
