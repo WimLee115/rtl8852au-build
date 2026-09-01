@@ -168,6 +168,7 @@ table below is generated from `os_dep/linux/usb_intf.c`.
 | `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Recognised            |
 | `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Recognised            |
 | `35bc:0100`  | TP-Link AX1800 (generic)       | RTL8852AU  | Recognised            |
+| `2357:012e`  | TP-Link Archer TX20U           | RTL8852AU  | Recognised            |
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested**            |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |

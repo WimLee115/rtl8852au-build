@@ -176,6 +176,7 @@ USB-adapters gebaseerd op de **RTL8852AU**- of
 | `2001:3321`  | D-Link DWA-X1850 (variant)     | RTL8852AU  | Herkend             |
 | `2001:332c`  | D-Link DWA-1850                | RTL8832AU  | Herkend             |
 | `35bc:0100`  | TP-Link AX1800 (generiek)      | RTL8852AU  | Herkend             |
+| `2357:012e`  | TP-Link Archer TX20U           | RTL8852AU  | Herkend             |
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest**          |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |

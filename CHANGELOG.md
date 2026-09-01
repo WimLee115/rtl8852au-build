@@ -7,6 +7,24 @@ changes in this file.
 
 ## [Unreleased]
 
+### Added
+- **USB ID `2357:012e` for the TP-Link Archer TX20U**, reported in
+  [#53](https://github.com/WimLee115/rtl8852au-build/issues/53) as
+  "Interface not created" — the device's `lsusb -v` shows a plain
+  vendor-specific interface (class/subclass/protocol `ff/ff/ff`) typical
+  of this chipset family, but `2357:012e` had no entry in
+  `rtw_usb_id_tbl[]`, so the kernel never matched the device to this
+  driver and no `wlan` interface appeared. The pre-fork vendor README
+  once listed this exact ID (under the name "TX20U Nano") as supported,
+  but it never actually made it into `os_dep/linux/usb_intf.c` at any
+  point in this fork's history — confirmed with `git log -p -S012e`
+  against the whole file history, back to the `1.15.0.1` baseline. Added
+  next to the other TP-Link entries in `usb_intf.c` and to both device
+  tables; marked **Recognised** rather than Tested since the reporter
+  flagged this as untested hardware requesting support, not a confirmed
+  working device — pending their confirmation that the interface now
+  binds and associates.
+
 ### Fixed
 - **`_connect_cmd_done()` had the same unguarded `phl_role` read that 1.17.0
   fixed one level up.** 1.17.0 closed the NULL-`phl_role` race in
