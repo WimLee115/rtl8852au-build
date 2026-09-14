@@ -180,10 +180,11 @@ that specific device. A *(reported)* suffix marks a device verified by
 the person who filed the hardware request rather than by the maintainer
 — for `0bda:8832` that evidence is the full test-suite run posted in
 [#43](https://github.com/WimLee115/rtl8852au-build/issues/43), and for
-`3625:010f` it's the AP-mode association and file transfer reported in
+`3625:010f` it's the AP-mode and station-mode association reported in
 [#52](https://github.com/WimLee115/rtl8852au-build/issues/52) — station
-mode against a phone hotspot is still unconfirmed on that device, see
-that issue for the ongoing troubleshooting.
+mode was the last open item there, and cleared up on its own once the
+reporter had a real AP instead of a phone hotspot and reset the
+NetworkManager connection profile, no driver change involved.
 **Recognised** means the USB ID is in the driver and the chipset
 matches, but a full end-to-end check is pending.
 

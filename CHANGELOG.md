@@ -66,6 +66,15 @@ changes in this file.
   actual association exchange, which `wpa_supplicant`'s log can't show on its
   own.
 
+  Update from [#52](https://github.com/WimLee115/rtl8852au-build/issues/52):
+  the station-mode rejects cleared up on their own once the reporter had a
+  real AP — their ISP resolved an outage that had them relying on a phone
+  hotspot — and reset the NetworkManager connection profile (`Forget`, then
+  reconnect). No over-the-air capture ended up being needed, and nothing in
+  the driver's association path changed; the most likely explanation is a
+  stale NetworkManager/wpa_supplicant profile rather than anything in
+  `_issue_assocreq()` or `rtw_joinbss_cmd()`.
+
 ## [1.17.0] — 2026-08-29
 
 Extends kernel compatibility on top of `1.16.1`: kernel 7.1 support, two
