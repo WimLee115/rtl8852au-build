@@ -57,6 +57,28 @@
 #include <linux/list.h>
 #include <linux/vmalloc.h>
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
+/* Linux 7.2 removed strncpy() from the kernel. Restore vendor strncpy()
+ * semantics with compiler builtins so we do not pull libc <string.h>
+ * into a -nostdinc kernel build.
+ */
+static inline char *rtw_compat_strncpy(char *dest, const char *src, size_t n)
+{
+	size_t len = 0;
+
+	if (n == 0)
+		return dest;
+	while (len < n && src[len] != '\0')
+		len++;
+	__builtin_memcpy(dest, src, len);
+	if (len < n)
+		__builtin_memset(dest + len, 0, n - len);
+	return dest;
+}
+#undef strncpy
+#define strncpy rtw_compat_strncpy
+#endif
+
 #ifdef CONFIG_RECV_THREAD_MODE
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #include <uapi/linux/sched/types.h>	/* struct sched_param */
