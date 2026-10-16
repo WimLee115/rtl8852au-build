@@ -26,6 +26,35 @@ changes in this file.
   binds and associates.
 
 ### Fixed
+- **Ubuntu backported a `cfg80211` signature change into `6.8.0-147`
+  without bumping `LINUX_VERSION_CODE`, breaking the DKMS build.**
+  Upstream commit `9c4f83092775` ("wifi: cfg80211: pass net_device to
+  .set_monitor_channel") added a `struct net_device *dev` parameter in
+  v6.13, and it was backported into the 6.12 stable series starting at
+  6.12.101 — the same callback broke a couple of `rtl8192eu` forks after
+  Debian 13 picked it up in `6.12.107`. This driver only switched to the
+  new 3-argument prototype at `LINUX_VERSION_CODE >= 6.17`, which was
+  already too high for plain upstream/stable kernels, and useless for
+  Ubuntu specifically: noble's `6.8.0-147.147` update cherry-picked the
+  same commit (confirmed directly in the package's own changelog, under
+  "Noble update: upstream stable patchset 2026-09-23"; absent from
+  `-139`/`-142`/`-146`) while leaving `LINUX_VERSION_CODE` fixed at
+  `6.8.0` for the entire 24.04 lifetime, so no version check could see
+  it — the kernel's own `-Werror=incompatible-pointer-types` then failed
+  the build on the `.set_monitor_channel` initializer. Lowered the guard
+  to `LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)`, OR'd with a
+  check against Ubuntu's own `UTS_UBUNTU_RELEASE_ABI >= 147` (exposed via
+  `generated/utsrelease.h`, now included defensively with
+  `__has_include` so non-Ubuntu kernels are unaffected) for the noble
+  `6.8.0` case specifically (`os_dep/linux/ioctl_cfg80211.c`). Reported in
+  [#58](https://github.com/WimLee115/rtl8852au-build/issues/58) against a
+  TP-Link `2357:0141` (RTL8852AU) on Ubuntu 24.04.5 LTS. Build-verified
+  with a full `make -j$(nproc)` (the same invocation DKMS uses) against
+  Linux `7.1.5+kali-amd64` headers — `ioctl_cfg80211.o` and `8852au.ko`
+  both build clean — and with the new guard expression itself checked
+  against seven synthetic version/ABI combinations by hand; no
+  `6.8.0-147` system was available here, so the Ubuntu-specific branch
+  still needs the reporter's field confirmation.
 - **`_connect_cmd_done()` had the same unguarded `phl_role` read that 1.17.0
   fixed one level up.** 1.17.0 closed the NULL-`phl_role` race in
   `_connect_msg_hdlr()`'s top-level dispatch, but `_connect_cmd_done()` —
