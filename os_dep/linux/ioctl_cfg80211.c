@@ -6456,17 +6456,31 @@ static void rtw_get_chbwoff_from_cfg80211_chan_def(
  * 3-arg prototype, not just >= 6.17 as this used to check.
  *
  * Ubuntu's noble (24.04) 6.8-based "linux" package cherry-picked the
- * same commit into its 6.8.0-147.147 update while leaving
- * LINUX_VERSION_CODE at 6.8.0 (confirmed via
- * changelogs.ubuntu.com/.../linux_6.8.0-147.147/changelog, absent in
- * -139/-142/-146), which is why a version-only check still breaks on
- * that kernel: see
- * https://github.com/WimLee115/rtl8852au-build/issues/58. UTS_UBUNTU_RELEASE_ABI
- * (from generated/utsrelease.h, included above) is Ubuntu's own escape
- * hatch for exactly this situation.
+ * same commit into its 6.8.0-147.147 update (confirmed in that upload's
+ * own changelog: "Upstream stable to v6.6.148, v6.12.101", versus
+ * v6.12.94 one upload earlier in 6.8.0-146.146 - no cfg80211 mention
+ * there). A version-only check still breaks on that kernel, but NOT for
+ * the reason the first attempt at this guard assumed: LINUX_VERSION_CODE
+ * is not pinned at 6.8.0 for noble's whole lifetime. The real
+ * 6.8.0-147-generic headers package ships
+ * include/generated/uapi/linux/version.h with LINUX_VERSION_CODE
+ * 395276, i.e. KERNEL_VERSION(6, 8, 12) - Canonical drifts the Makefile
+ * SUBLEVEL upward as they rebase onto newer upstream stable baselines,
+ * while keeping `uname -r` itself reading "6.8.0-<abi>-generic". An
+ * `== KERNEL_VERSION(6, 8, 0)` check (the previous version of this
+ * guard) therefore went false the moment that drift started, silently
+ * disabling the Ubuntu branch below it: see the second build log in
+ * https://github.com/WimLee115/rtl8852au-build/issues/58. Checking a
+ * range instead tolerates that drift without overlapping the plain
+ * version check above. UTS_UBUNTU_RELEASE_ABI (from
+ * generated/utsrelease.h, included above) is Ubuntu's own escape hatch
+ * for exactly this situation.
  */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)) || \
-	(defined(UTS_UBUNTU_RELEASE_ABI) && (LINUX_VERSION_CODE == KERNEL_VERSION(6, 8, 0)) && (UTS_UBUNTU_RELEASE_ABI >= 147))
+	(defined(UTS_UBUNTU_RELEASE_ABI) && \
+	 (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)) && \
+	 (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 101)) && \
+	 (UTS_UBUNTU_RELEASE_ABI >= 147))
 static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy,
 	struct net_device *dev,
 	struct cfg80211_chan_def *chandef)

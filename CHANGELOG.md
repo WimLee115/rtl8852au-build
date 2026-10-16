@@ -27,34 +27,53 @@ changes in this file.
 
 ### Fixed
 - **Ubuntu backported a `cfg80211` signature change into `6.8.0-147`
-  without bumping `LINUX_VERSION_CODE`, breaking the DKMS build.**
-  Upstream commit `9c4f83092775` ("wifi: cfg80211: pass net_device to
-  .set_monitor_channel") added a `struct net_device *dev` parameter in
-  v6.13, and it was backported into the 6.12 stable series starting at
-  6.12.101 — the same callback broke a couple of `rtl8192eu` forks after
-  Debian 13 picked it up in `6.12.107`. This driver only switched to the
-  new 3-argument prototype at `LINUX_VERSION_CODE >= 6.17`, which was
-  already too high for plain upstream/stable kernels, and useless for
-  Ubuntu specifically: noble's `6.8.0-147.147` update cherry-picked the
-  same commit (confirmed directly in the package's own changelog, under
-  "Noble update: upstream stable patchset 2026-09-23"; absent from
-  `-139`/`-142`/`-146`) while leaving `LINUX_VERSION_CODE` fixed at
-  `6.8.0` for the entire 24.04 lifetime, so no version check could see
-  it — the kernel's own `-Werror=incompatible-pointer-types` then failed
-  the build on the `.set_monitor_channel` initializer. Lowered the guard
-  to `LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)`, OR'd with a
-  check against Ubuntu's own `UTS_UBUNTU_RELEASE_ABI >= 147` (exposed via
-  `generated/utsrelease.h`, now included defensively with
-  `__has_include` so non-Ubuntu kernels are unaffected) for the noble
-  `6.8.0` case specifically (`os_dep/linux/ioctl_cfg80211.c`). Reported in
-  [#58](https://github.com/WimLee115/rtl8852au-build/issues/58) against a
-  TP-Link `2357:0141` (RTL8852AU) on Ubuntu 24.04.5 LTS. Build-verified
-  with a full `make -j$(nproc)` (the same invocation DKMS uses) against
-  Linux `7.1.5+kali-amd64` headers — `ioctl_cfg80211.o` and `8852au.ko`
-  both build clean — and with the new guard expression itself checked
-  against seven synthetic version/ABI combinations by hand; no
-  `6.8.0-147` system was available here, so the Ubuntu-specific branch
-  still needs the reporter's field confirmation.
+  without bumping `LINUX_VERSION_CODE` to match — and this fix's first
+  attempt had the same blind spot.** Upstream commit `9c4f83092775`
+  ("wifi: cfg80211: pass net_device to .set_monitor_channel") added a
+  `struct net_device *dev` parameter in v6.13, backported into the 6.12
+  stable series starting at 6.12.101 — the same callback broke a couple
+  of `rtl8192eu` forks after Debian 13 picked it up in `6.12.107`. This
+  driver only switched to the new 3-argument prototype at
+  `LINUX_VERSION_CODE >= 6.17`, already too high for plain
+  upstream/stable kernels, and useless for Ubuntu specifically: noble's
+  `6.8.0-147.147` update cherry-picked the same commit — its own
+  changelog lists "Upstream stable to v6.6.148, **v6.12.101**", versus
+  "v6.12.94" and no cfg80211 mention one upload earlier in
+  `6.8.0-146.146`.
+  The first attempt at this fix added an `UTS_UBUNTU_RELEASE_ABI >= 147`
+  escape hatch (from `generated/utsrelease.h`) but gated it on
+  `LINUX_VERSION_CODE == KERNEL_VERSION(6, 8, 0)`, assuming Ubuntu pins
+  `LINUX_VERSION_CODE` at exactly `6.8.0` for noble's whole lifetime —
+  confirmed wrong by downloading the actual
+  `linux-headers-6.8.0-147-generic` package from archive.ubuntu.com:
+  its `include/generated/uapi/linux/version.h` reports
+  `LINUX_VERSION_CODE 395276`, i.e. `KERNEL_VERSION(6, 8, 12)`, and its
+  Makefile has `SUBLEVEL = 12` — Canonical drifts that number upward as
+  they rebase onto newer upstream stable baselines, independently of the
+  fixed `6.8.0-<abi>-generic` string `uname -r` reports. The `==` check
+  went false the moment that drift passed `6.8.0`, so the Ubuntu branch
+  never fired and the reporter's rebuild failed with the identical
+  error, just at a shifted line number. Changed that disjunct to a
+  range — `LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)` **and**
+  `< KERNEL_VERSION(6, 12, 101)`, alongside the existing ABI check — so
+  it tolerates the drift instead of assuming a fixed point
+  (`os_dep/linux/ioctl_cfg80211.c`). Reported in
+  [#58](https://github.com/WimLee115/rtl8852au-build/issues/58) against
+  a TP-Link `2357:0141` (RTL8852AU) on Ubuntu 24.04.5 LTS.
+  Verified this time against the real package rather than its changelog
+  text alone: downloaded
+  `linux-headers-6.8.0-147-generic_6.8.0-147.147_amd64.deb` and its
+  `linux-headers-6.8.0-147_...` common-package dependency from
+  archive.ubuntu.com, confirmed `UTS_UBUNTU_RELEASE_ABI 147` in the
+  package's own `include/generated/utsrelease.h`, and ran both the old
+  and new guard expressions through the preprocessor against those
+  exact real values — old guard: false (reproducing the report
+  byte-for-byte); new guard: true. A full cross-compiled module build
+  against that package pair wasn't attempted here (the flavor package
+  ships no `scripts/`; that lives in the sibling common package and is
+  normally reached via symlinks a real install creates, which wasn't
+  worth reproducing for this check), so the reporter's confirmation on
+  the actual `-147` system is still the final word.
 - **`_connect_cmd_done()` had the same unguarded `phl_role` read that 1.17.0
   fixed one level up.** 1.17.0 closed the NULL-`phl_role` race in
   `_connect_msg_hdlr()`'s top-level dispatch, but `_connect_cmd_done()` —
