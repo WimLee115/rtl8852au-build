@@ -16,15 +16,6 @@
 
 #include <drv_types.h>
 
-#if defined(__has_include) && __has_include(<generated/utsrelease.h>)
-/* Exposes UTS_UBUNTU_RELEASE_ABI on Ubuntu kernels, which backport
- * individual cfg80211 API changes into their numbered point releases
- * without bumping LINUX_VERSION_CODE. See the set_monitor_channel
- * guard below for why a version-only check can't detect that.
- */
-#include <generated/utsrelease.h>
-#endif
-
 #ifdef CONFIG_IOCTL_CFG80211
 
 #ifndef DBG_RTW_CFG80211_STA_PARAM
@@ -6450,44 +6441,39 @@ static void rtw_get_chbwoff_from_cfg80211_chan_def(
 
 /*
  * Upstream commit 9c4f83092775 ("wifi: cfg80211: pass net_device to
- * .set_monitor_channel") added the "dev" parameter in v6.13, and it was
- * backported into the 6.12 stable series starting at 6.12.101 - so any
- * kernel reporting LINUX_VERSION_CODE >= 6.12.101 already has the new
- * 3-arg prototype, not just >= 6.17 as this used to check.
+ * .set_monitor_channel") added a "dev" parameter in v6.13, backported
+ * into 6.12 stable starting at 6.12.101. Distros backport it earlier
+ * than that into kernels whose LINUX_VERSION_CODE doesn't say so:
+ * Ubuntu noble's 6.8.0-147-generic has it (its own changelog: "Upstream
+ * stable to v6.6.148, v6.12.101", versus v6.12.94 and no cfg80211
+ * mention one upload earlier in 6.8.0-146.146). Two earlier attempts at
+ * a version/ABI-number guard here both broke: Canonical drifts the
+ * Makefile SUBLEVEL as they rebase onto newer stable baselines while
+ * `uname -r` keeps reading "6.8.0-<abi>-generic", so an exact
+ * LINUX_VERSION_CODE match goes stale; and Ubuntu's own
+ * UTS_UBUNTU_RELEASE_ABI escape hatch isn't comparable across
+ * different kernel source packages either - jammy's "linux-azure"
+ * 6.8.0-1064-azure reports the identical LINUX_VERSION_CODE as noble's
+ * 6.8.0-147-generic (both KERNEL_VERSION(6, 8, 12)) and a *higher* ABI
+ * (1064 vs 147), yet still has the 2-arg prototype: see the CI failure
+ * linked from https://github.com/WimLee115/rtl8852au-build/issues/58.
  *
- * Ubuntu's noble (24.04) 6.8-based "linux" package cherry-picked the
- * same commit into its 6.8.0-147.147 update (confirmed in that upload's
- * own changelog: "Upstream stable to v6.6.148, v6.12.101", versus
- * v6.12.94 one upload earlier in 6.8.0-146.146 - no cfg80211 mention
- * there). A version-only check still breaks on that kernel, but NOT for
- * the reason the first attempt at this guard assumed: LINUX_VERSION_CODE
- * is not pinned at 6.8.0 for noble's whole lifetime. The real
- * 6.8.0-147-generic headers package ships
- * include/generated/uapi/linux/version.h with LINUX_VERSION_CODE
- * 395276, i.e. KERNEL_VERSION(6, 8, 12) - Canonical drifts the Makefile
- * SUBLEVEL upward as they rebase onto newer upstream stable baselines,
- * while keeping `uname -r` itself reading "6.8.0-<abi>-generic". An
- * `== KERNEL_VERSION(6, 8, 0)` check (the previous version of this
- * guard) therefore went false the moment that drift started, silently
- * disabling the Ubuntu branch below it: see the second build log in
- * https://github.com/WimLee115/rtl8852au-build/issues/58. Checking a
- * range instead tolerates that drift without overlapping the plain
- * version check above. UTS_UBUNTU_RELEASE_ABI (from
- * generated/utsrelease.h, included above) is Ubuntu's own escape hatch
- * for exactly this situation.
+ * So stop inferring this from version numbers and ask the compiler
+ * what the kernel's own struct cfg80211_ops.set_monitor_channel
+ * actually is, the same way the kernel's own __same_type()/min()/max()
+ * macros compare types: __typeof__ on a NULL-cast member access (the
+ * container_of() trick) gets the member's declared type without
+ * needing an instance, and __builtin_types_compatible_p() compares it
+ * against the 3-arg prototype. Both are plain GCC/Clang builtins that
+ * every compiler capable of building the kernel already supports.
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)) || \
-	(defined(UTS_UBUNTU_RELEASE_ABI) && \
-	 (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)) && \
-	 (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 101)) && \
-	 (UTS_UBUNTU_RELEASE_ABI >= 147))
-static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy,
-	struct net_device *dev,
+#define RTW_CFG80211_SMC_HAS_NDEV \
+	__builtin_types_compatible_p( \
+		__typeof__(((struct cfg80211_ops *)0)->set_monitor_channel), \
+		int (*)(struct wiphy *, struct net_device *, struct cfg80211_chan_def *))
+
+static int cfg80211_rtw_set_monitor_channel_impl(struct wiphy *wiphy,
 	struct cfg80211_chan_def *chandef)
-#else
-static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy,
-	struct cfg80211_chan_def *chandef)
-#endif
 {
 	_adapter *padapter = wiphy_to_adapter(wiphy);
 	u8 target_channal, target_offset, target_width, ht_option;
@@ -6523,6 +6509,24 @@ static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy,
 		target_offset, RTW_CMDF_WAIT_ACK);
 
 	return 0;
+}
+
+/*
+ * One shim per prototype so __builtin_choose_expr below has an address
+ * of each arity to offer the compiler; only the one actually matching
+ * this kernel's struct cfg80211_ops ever ends up referenced in the
+ * compiled output, so the other costs nothing beyond these few lines.
+ */
+static int cfg80211_rtw_set_monitor_channel_2arg(struct wiphy *wiphy,
+	struct cfg80211_chan_def *chandef)
+{
+	return cfg80211_rtw_set_monitor_channel_impl(wiphy, chandef);
+}
+
+static int cfg80211_rtw_set_monitor_channel_3arg(struct wiphy *wiphy,
+	struct net_device *dev, struct cfg80211_chan_def *chandef)
+{
+	return cfg80211_rtw_set_monitor_channel_impl(wiphy, chandef);
 }
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
@@ -10464,7 +10468,9 @@ struct cfg80211_ops rtw_cfg80211_ops = {
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
-	.set_monitor_channel = cfg80211_rtw_set_monitor_channel,
+	.set_monitor_channel = __builtin_choose_expr(RTW_CFG80211_SMC_HAS_NDEV,
+		cfg80211_rtw_set_monitor_channel_3arg,
+		cfg80211_rtw_set_monitor_channel_2arg),
 #endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	.get_channel = cfg80211_rtw_get_channel,
