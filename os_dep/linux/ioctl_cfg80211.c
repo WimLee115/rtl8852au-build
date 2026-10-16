@@ -16,6 +16,15 @@
 
 #include <drv_types.h>
 
+#if defined(__has_include) && __has_include(<generated/utsrelease.h>)
+/* Exposes UTS_UBUNTU_RELEASE_ABI on Ubuntu kernels, which backport
+ * individual cfg80211 API changes into their numbered point releases
+ * without bumping LINUX_VERSION_CODE. See the set_monitor_channel
+ * guard below for why a version-only check can't detect that.
+ */
+#include <generated/utsrelease.h>
+#endif
+
 #ifdef CONFIG_IOCTL_CFG80211
 
 #ifndef DBG_RTW_CFG80211_STA_PARAM
@@ -6439,7 +6448,25 @@ static void rtw_get_chbwoff_from_cfg80211_chan_def(
 }
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)) */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 17, 0))
+/*
+ * Upstream commit 9c4f83092775 ("wifi: cfg80211: pass net_device to
+ * .set_monitor_channel") added the "dev" parameter in v6.13, and it was
+ * backported into the 6.12 stable series starting at 6.12.101 - so any
+ * kernel reporting LINUX_VERSION_CODE >= 6.12.101 already has the new
+ * 3-arg prototype, not just >= 6.17 as this used to check.
+ *
+ * Ubuntu's noble (24.04) 6.8-based "linux" package cherry-picked the
+ * same commit into its 6.8.0-147.147 update while leaving
+ * LINUX_VERSION_CODE at 6.8.0 (confirmed via
+ * changelogs.ubuntu.com/.../linux_6.8.0-147.147/changelog, absent in
+ * -139/-142/-146), which is why a version-only check still breaks on
+ * that kernel: see
+ * https://github.com/WimLee115/rtl8852au-build/issues/58. UTS_UBUNTU_RELEASE_ABI
+ * (from generated/utsrelease.h, included above) is Ubuntu's own escape
+ * hatch for exactly this situation.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)) || \
+	(defined(UTS_UBUNTU_RELEASE_ABI) && (LINUX_VERSION_CODE == KERNEL_VERSION(6, 8, 0)) && (UTS_UBUNTU_RELEASE_ABI >= 147))
 static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy,
 	struct net_device *dev,
 	struct cfg80211_chan_def *chandef)
@@ -7068,7 +7095,11 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 	enum nl80211_channel_type channel_type,
 #endif
-	unsigned int duration, u64 *cookie)
+	unsigned int duration, u64 *cookie
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
+	, const u8 *rx_addr
+#endif
+	)
 {
 	s32 err = 0;
 	u8 remain_ch = (u8) ieee80211_frequency_to_channel(channel->center_freq);
@@ -7151,7 +7182,11 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 	enum nl80211_channel_type channel_type,
 #endif
-	unsigned int duration, u64 *cookie)
+	unsigned int duration, u64 *cookie
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
+	, const u8 *rx_addr
+#endif
+	)
 {
 	s32 err = 0;
 	u8 remain_ch = (u8) ieee80211_frequency_to_channel(channel->center_freq);
@@ -10073,12 +10108,12 @@ static int rtw_cfg80211_init_wiphy(_adapter *adapter, struct wiphy *wiphy)
 	wiphy->features |= NL80211_FEATURE_SAE;
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(7, 2, 0))
 #ifdef CONFIG_WIFI_MONITOR
 	/* Currently only for Monitor debugging */
 	wiphy->flags |= WIPHY_FLAG_SUPPORTS_5_10_MHZ;
 #endif
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) */
+#endif /* 3.11 <= LINUX_VERSION_CODE < 7.2 */
 	ret = _SUCCESS;
 
 exit:

@@ -17,6 +17,19 @@ ccflags-y += -Wno-unused
 
 GCC_VER_49 := 1
 
+# kbuild 6.13+/7.x: $(src) can be relative to the kernel tree for out-of-tree
+# modules, so -I$(src)/include looks at the kernel include/ and misses
+# drv_types.h. $(M) is the absolute module directory during the kbuild pass.
+RTL_SRC := $(src)
+ifneq ($(M),)
+RTL_SRC := $(M)
+endif
+ifeq ($(RTL_SRC),)
+RTL_SRC := $(shell pwd)
+endif
+export RTL_SRC
+
+ccflags-y += -I$(RTL_SRC)/include
 ccflags-y += -I$(src)/include
 
 ldflags-y += --strip-debug
@@ -585,6 +598,7 @@ ARCH ?= $(SUBARCH)
 include $(wildcard $(DRV_PATH)/platform/*.mk)
 
 # Import platform specific compile options
+ccflags-y += -I$(RTL_SRC)/platform
 ccflags-y += -I$(src)/platform
 #_PLATFORM_FILES := platform/platform_ops.o
 OBJS += $(_PLATFORM_FILES)
