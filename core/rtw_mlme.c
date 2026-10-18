@@ -6129,6 +6129,12 @@ enum rtw_phl_status rtw_disconnect_cmd(struct _ADAPTER *a, struct cmd_obj *pcmd)
 
 	RTW_DBG(FUNC_ADPT_FMT ": +\n", FUNC_ADPT_ARG(a));
 
+	if (!role || dev_is_surprise_removed(d)) {
+		RTW_WARN(FUNC_ADPT_FMT ": skip disconnect, role=%p sr=%d\n",
+			 FUNC_ADPT_ARG(a), role, dev_is_surprise_removed(d));
+		return RTW_PHL_STATUS_FAILURE;
+	}
+
 	if (a->disconnect_token) {
 		RTW_WARN(FUNC_ADPT_FMT ": disconnect is on going...\n",
 			 FUNC_ADPT_ARG(a));
