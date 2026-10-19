@@ -1531,7 +1531,14 @@ void rtw_drv_stop_prim_iface(_adapter *adapter)
 	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
 	struct debug_priv *pdbgpriv = &dvobj->drv_dbg;
 
-	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE)
+	/* USB unplug calls rtw_dev_remove() → here while WIFI_ASOC_STATE is
+	 * still set. Firmware is already gone; rtw_disassoc_cmd() then
+	 * dereferences a NULL/stale phl_role in rtw_disconnect_cmd() and
+	 * oopses the kernel (RIP rtw_disconnect_cmd, irqs off). Same skip
+	 * as netdev_close(). */
+	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE
+	    && !dev_is_surprise_removed(dvobj)
+	    && !dvobj->processing_dev_remove)
 		rtw_disassoc_cmd(adapter, 0, RTW_CMDF_DIRECTLY|RTW_CMDF_WAIT_ACK);
 
 #ifdef CONFIG_AP_MODE
@@ -1738,7 +1745,9 @@ static void rtw_drv_stop_vir_if(_adapter *padapter)
 
 	pnetdev = padapter->pnetdev;
 
-	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE)
+	if (check_fwstate(pmlmepriv, WIFI_ASOC_STATE) == _TRUE
+	    && !dev_is_surprise_removed(adapter_to_dvobj(padapter))
+	    && !adapter_to_dvobj(padapter)->processing_dev_remove)
 		rtw_disassoc_cmd(padapter, 0, RTW_CMDF_DIRECTLY|RTW_CMDF_WAIT_ACK);
 
 #ifdef CONFIG_AP_MODE
