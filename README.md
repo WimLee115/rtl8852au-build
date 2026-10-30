@@ -172,6 +172,7 @@ table below is generated from `os_dep/linux/usb_intf.c`.
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Tested**            |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Recognised            |
+| `3625:010d`  | TP-Link Archer TX30U Plus      | RTL8852AU  | **Tested** (reported) |
 | `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | **Tested** (reported) |
 | `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Recognised            |
 
