@@ -180,6 +180,7 @@ USB-adapters gebaseerd op de **RTL8852AU**- of
 | `2357:013f`  | TP-Link Archer TX20U Plus      | RTL8852AU  | **Getest**          |
 | `2357:0140`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
 | `2357:0141`  | TP-Link AX1800 (variant)       | RTL8852AU  | Herkend             |
+| `3625:010d`  | TP-Link Archer TX30U Plus      | RTL8852AU  | **Getest** (melder) |
 | `3625:010f`  | TP-Link Archer TX35U Plus      | RTL8852AU  | **Getest** (melder) |
 | `056e:4020`  | Elecom WDC-X1201DU3            | RTL8852AU  | Herkend             |
 

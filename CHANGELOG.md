@@ -8,6 +8,16 @@ changes in this file.
 ## [Unreleased]
 
 ### Added
+- **USB ID `3625:010d` for the TP-Link Archer TX30U Plus.** The adapter
+  first enumerates as a Realtek mass-storage "DISK" (`0bda:1a2b`) and then
+  re-enumerates as `3625:010d` with a single vendor-specific interface
+  (`ff/ff/ff`, 1 bulk-IN + 7 bulk-OUT endpoints). Without an entry in
+  `rtw_usb_id_tbl[]` the module loaded but never bound, so no `wlan`
+  interface appeared. Verified on Linux 6.12.113 (Debian 13): the driver
+  binds, associates to a WPA2 5 GHz AP, and passes traffic (about
+  205 Mbit/s over USB 3 with `rtw_switch_usb_mode=1`). Marked **Tested**
+  (reported); the chipset is inferred from the working driver, not from an
+  FCC lookup.
 - **USB ID `2357:012e` for the TP-Link Archer TX20U**, reported in
   [#53](https://github.com/WimLee115/rtl8852au-build/issues/53) as
   "Interface not created" — the device's `lsusb -v` shows a plain
