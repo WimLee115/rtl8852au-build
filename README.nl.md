@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/WimLee115/rtl8852au-build/actions/workflows/ci.yml)
 [![Nieuwste release](https://img.shields.io/github/v/release/WimLee115/rtl8852au-build?sort=semver&label=release&color=0a7ea4)](https://github.com/WimLee115/rtl8852au-build/releases/latest)
-[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.1-informational.svg)](#compatibiliteit)
+[![Kernel](https://img.shields.io/badge/kernel-6.1%20%E2%80%93%207.2-informational.svg)](#compatibiliteit)
 [![Licentie: GPL-2.0](https://img.shields.io/badge/licentie-GPL--2.0-blue.svg)](LICENSE)
 [![DKMS](https://img.shields.io/badge/DKMS-ondersteund-brightgreen.svg)](#dkms-installatie)
 [![WiFi 6](https://img.shields.io/badge/WiFi%206-AX1800-0a7ea4.svg)](#ondersteunde-apparaten)
@@ -31,14 +31,15 @@ kunnen worden.
   API-verwijderingen; CI compileert tegen distro-kernels én de nieuwste
   kernel.org stable- en longterm-releases, zodat regressies op de
   ondersteunde lijn vroeg worden opgevangen. Geverifieerd tot **Linux
-  7.1.5** — zowel een schone build als een echte DKMS-autoinstall.
+  7.2.15** — zowel een schone build als een echte DKMS-autoinstall.
   Kernel 7.1.0 brak de cfg80211-station/key-callbacks (`net_device` →
   `wireless_dev`) en de pppoe-bridge-extension-structs achter
-  `CONFIG_RTW_BR_EXT`; beide zijn nu version-gated gefixt. Twee andere
-  blokkades uit een eerdere probe tegen 7.2 — het verwijderen van
-  `strncpy` en een geschrapte wiphy-vlag — deden zich op 7.1.5 niet
-  voor, dus die zitten ergens tussen 7.1.0 en 7.2. **Kernel 7.2 bouwt
-  nog niet**; de exacte grens staat niet vast.
+  `CONFIG_RTW_BR_EXT`; 7.2 verwijderde daarna `strncpy`, schrapte de
+  wiphy-vlag `WIPHY_FLAG_SUPPORTS_5_10_MHZ` en gaf `remain_on_channel`
+  een extra `rx_addr`-parameter. **Kernel 7.2 bouwt**; de twee
+  cfg80211-wijzigingen worden gedetecteerd door de headers van de
+  kernel zelf te bevragen in plaats van `LINUX_VERSION_CODE` te lezen,
+  zodat een distro die er één vroeg terugport ook werkt.
 - **Monitor-mode die overeind blijft.** Vier aparte fixes voor de
   RX-path-crashes die de vendor-driver teisterden — UBSAN
   out-of-bounds, een NULL-deref, een SKB use-after-free en een
@@ -92,6 +93,21 @@ Ten opzichte van de Realtek vendor-bron `v1.15.0.1-2`:
   herziening van de pppoe-tag-pointers achter `CONFIG_RTW_BR_EXT`
   (`core/rtw_br_ext.c`). Version-gated op
   `LINUX_VERSION_CODE >= 7.1.0`; geverifieerd tegen Linux 7.1.5.
+- **Kernel 7.2-compatibiliteit** — drie verwijderingen/signature-
+  wijzigingen, waarvan twee gedetecteerd door de kernel te probben in
+  plaats van zijn versienummer, omdat `LINUX_VERSION_CODE` geen
+  betrouwbaar signaal is voor cfg80211-wijzigingen die distro's
+  terugporten (de les van
+  [#58](https://github.com/WimLee115/rtl8852au-build/issues/58)):
+  `remain_on_channel` kreeg een afsluitende `const u8 *rx_addr`,
+  opgelost met een `__builtin_types_compatible_p()`-probe op de eigen
+  `struct cfg80211_ops` van de kernel; `WIPHY_FLAG_SUPPORTS_5_10_MHZ`
+  verdween uit `enum wiphy_flags`, en omdat een enumerator onzichtbaar
+  is voor de preprocessor greppt de hoofd-`Makefile` de echte
+  `cfg80211.h` op de definitie ervan; en `strncpy()` werd uit de kernel
+  verwijderd, nagebootst met compiler-builtins
+  (`include/osdep_service_linux.h`, `phl/pltfm_ops_linux.h`).
+  Geverifieerd tegen Linux 7.2.15.
 - **UBSAN array-out-of-bounds**-fix op elke WPA/WPA2-key-operatie
   (`include/ieee80211.h`).
 - **Monitor-mode NULL-deref, SKB use-after-free, race + double-free**
@@ -309,22 +325,22 @@ sudo ./tests/run_tests.sh --all          # alles, inclusief destructief
 | Kali Linux Rolling 2026.1    | 6.19.14+kali-amd64 | x86_64       | Maintainer-hardware   |
 | Kali Linux Rolling           | 7.0.12+kali-amd64  | x86_64       | Maintainer-build      |
 | Kali Linux Rolling           | 7.1.5+kali-amd64   | x86_64       | Maintainer-build (DKMS-installatie) |
+| Kali Linux Rolling           | 7.2.15+kali-amd64  | x86_64       | Maintainer-build (DKMS-installatie) |
 | Ubuntu 22.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 | Ubuntu 24.04 LTS             | distributie-default | x86_64      | CI-bouw-matrix        |
 
-Andere kernels in het bereik 6.1 LTS → 7.1 worden verwacht te
-compileren omdat elke patch gebonden is aan een
-`LINUX_VERSION_CODE`-conditie, maar zijn niet door de maintainer
-geverifieerd.
+Andere kernels in het bereik 6.1 LTS → 7.2 worden verwacht te
+compileren omdat elke patch óf gebonden is aan een
+`LINUX_VERSION_CODE`-conditie, óf uit de headers van de kernel zelf
+wordt geprobed, maar zijn niet door de maintainer geverifieerd.
 
 CI bouwt daarnaast tegen de nieuwste **longterm**- en **stable**-releases van
 kernel.org, tijdens de run opgehaald, bij elke push *én* wekelijks volgens
 schema — zo komt een nieuwe LTS die de build breekt aan het licht in de week
 dat hij uitkomt, in plaats van pas bij de volgende commit. Longterm is een
-harde poort; nieuwste-stable is een informatieve vroege waarschuwing, en die
-blijft falen zolang de 7.x-port openstaat — het verwijderen van `strncpy` en
-een geschrapte wiphy-vlag, ergens tussen 7.1.0 en 7.2 (7.2 op het moment van
-schrijven).
+harde poort; nieuwste-stable is een informatieve vroege waarschuwing en geen
+poort, zodat een kernel die uitkomt ná de laatste port luid rapporteert zonder
+de branch rood te maken.
 
 ## Probleemoplossing
 
