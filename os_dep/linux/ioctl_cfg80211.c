@@ -7103,7 +7103,7 @@ inline s32 rtw_cfg80211_get_last_ro_ch_passing_ms(_adapter *adapter)
 }
 
 #if 1 /*CONFIG_PHL_ARCH*/
-static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
+static s32 cfg80211_rtw_remain_on_channel_impl(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
 	struct wireless_dev *wdev,
 #else
@@ -7113,11 +7113,7 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 	enum nl80211_channel_type channel_type,
 #endif
-	unsigned int duration, u64 *cookie
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
-	, const u8 *rx_addr
-#endif
-	)
+	unsigned int duration, u64 *cookie)
 {
 	s32 err = 0;
 	u8 remain_ch = (u8) ieee80211_frequency_to_channel(channel->center_freq);
@@ -7190,7 +7186,7 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 
 #else /* !CONFIG_PHL_ARCH */
 
-static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
+static s32 cfg80211_rtw_remain_on_channel_impl(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
 	struct wireless_dev *wdev,
 #else
@@ -7200,11 +7196,7 @@ static s32 cfg80211_rtw_remain_on_channel(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0))
 	enum nl80211_channel_type channel_type,
 #endif
-	unsigned int duration, u64 *cookie
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0))
-	, const u8 *rx_addr
-#endif
-	)
+	unsigned int duration, u64 *cookie)
 {
 	s32 err = 0;
 	u8 remain_ch = (u8) ieee80211_frequency_to_channel(channel->center_freq);
@@ -7344,6 +7336,58 @@ exit:
 	return err;
 }
 #endif /* CONFIG_PHL_ARCH */
+
+/*
+ * Linux 7.2 added a trailing "const u8 *rx_addr" to
+ * struct cfg80211_ops.remain_on_channel. Don't infer that from
+ * LINUX_VERSION_CODE: issue #58 established on this very file that
+ * distros backport individual cfg80211_ops signature changes into
+ * kernels whose version macro doesn't move with them (Ubuntu noble
+ * shipped the .set_monitor_channel change in a 6.8.0-147 point
+ * release), and that no numeric threshold separates the kernels that
+ * need opposite prototypes - jammy's linux-azure 6.8.0-1064 reports
+ * the identical LINUX_VERSION_CODE as noble's 6.8.0-147 yet wants the
+ * older arity. A version gate here is the same bug waiting for the
+ * first distro to backport this one.
+ *
+ * So ask the compiler what this kernel's own struct cfg80211_ops
+ * declares, the way the kernel's own __same_type()/min()/max() macros
+ * compare types: __typeof__ on a NULL-cast member access (the
+ * container_of() trick) gets the member's declared type without
+ * needing an instance, __builtin_types_compatible_p() compares it
+ * against the 7.2 prototype, and __builtin_choose_expr() picks which
+ * shim is actually referenced. Plain GCC/Clang builtins, already
+ * relied on by any compiler that can build the kernel.
+ *
+ * rx_addr is accepted and dropped: the driver hands the whole
+ * remain-on-channel request to rtw_phl_remain_on_ch_cmd(), which has
+ * no notion of a per-request RX address, so there is nothing to pass
+ * it to. Behaviour is unchanged from a pre-7.2 kernel.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#define RTW_CFG80211_ROC_HAS_RX_ADDR \
+	__builtin_types_compatible_p( \
+		__typeof__(((struct cfg80211_ops *)0)->remain_on_channel), \
+		int (*)(struct wiphy *, struct wireless_dev *, \
+			struct ieee80211_channel *, unsigned int, u64 *, \
+			const u8 *))
+
+static s32 cfg80211_rtw_remain_on_channel_norxaddr(struct wiphy *wiphy,
+	struct wireless_dev *wdev, struct ieee80211_channel *channel,
+	unsigned int duration, u64 *cookie)
+{
+	return cfg80211_rtw_remain_on_channel_impl(wiphy, wdev, channel,
+		duration, cookie);
+}
+
+static s32 cfg80211_rtw_remain_on_channel_rxaddr(struct wiphy *wiphy,
+	struct wireless_dev *wdev, struct ieee80211_channel *channel,
+	unsigned int duration, u64 *cookie, const u8 *rx_addr)
+{
+	return cfg80211_rtw_remain_on_channel_impl(wiphy, wdev, channel,
+		duration, cookie);
+}
+#endif /* 3.8 <= LINUX_VERSION_CODE */
 
 static s32 cfg80211_rtw_cancel_remain_on_channel(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
@@ -10126,12 +10170,18 @@ static int rtw_cfg80211_init_wiphy(_adapter *adapter, struct wiphy *wiphy)
 	wiphy->features |= NL80211_FEATURE_SAE;
 #endif
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(7, 2, 0))
+/* RTW_HAS_WIPHY_FLAG_SUPPORTS_5_10_MHZ is probed from the kernel's own
+ * cfg80211.h by the top-level Makefile - 7.2 dropped this enumerator,
+ * and an enumerator cannot be tested for here with #ifdef. See the
+ * probe's comment for why this is not a LINUX_VERSION_CODE check.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0)) && \
+	defined(RTW_HAS_WIPHY_FLAG_SUPPORTS_5_10_MHZ)
 #ifdef CONFIG_WIFI_MONITOR
 	/* Currently only for Monitor debugging */
 	wiphy->flags |= WIPHY_FLAG_SUPPORTS_5_10_MHZ;
 #endif
-#endif /* 3.11 <= LINUX_VERSION_CODE < 7.2 */
+#endif /* 3.11 <= LINUX_VERSION_CODE && have WIPHY_FLAG_SUPPORTS_5_10_MHZ */
 	ret = _SUCCESS;
 
 exit:
@@ -10476,7 +10526,13 @@ struct cfg80211_ops rtw_cfg80211_ops = {
 	.get_channel = cfg80211_rtw_get_channel,
 #endif
 
-	.remain_on_channel = cfg80211_rtw_remain_on_channel,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+	.remain_on_channel = __builtin_choose_expr(RTW_CFG80211_ROC_HAS_RX_ADDR,
+		cfg80211_rtw_remain_on_channel_rxaddr,
+		cfg80211_rtw_remain_on_channel_norxaddr),
+#else
+	.remain_on_channel = cfg80211_rtw_remain_on_channel_impl,
+#endif
 	.cancel_remain_on_channel = cfg80211_rtw_cancel_remain_on_channel,
 #ifdef CONFIG_P2P
 	#if defined(RTW_DEDICATED_P2P_DEVICE)

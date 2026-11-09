@@ -36,6 +36,70 @@ changes in this file.
   binds and associates.
 
 ### Fixed
+- **Kernel 7.2 builds — and the two `cfg80211` pieces of that port no
+  longer key off a version number.** 7.2 broke the build three ways:
+  `strncpy()` is gone from `include/linux/string.h` (only `strscpy`,
+  `strscpy_pad` and the `strtomem` family remain),
+  `WIPHY_FLAG_SUPPORTS_5_10_MHZ` was dropped from `enum wiphy_flags`
+  (its `BIT(22)` is now a hole between `HAS_REMAIN_ON_CHANNEL` and
+  `HAS_CHANNEL_SWITCH`), and `struct cfg80211_ops.remain_on_channel`
+  gained a trailing `const u8 *rx_addr`. The initial port
+  ([#55](https://github.com/WimLee115/rtl8852au-build/pull/55),
+  contributor: pablobascunana) gated all three on
+  `LINUX_VERSION_CODE >= 7.2.0` and also fixed the include paths —
+  kbuild 6.13+ leaves `$(src)` relative for out-of-tree modules, so
+  `-I$(src)/include` resolved against the kernel tree and missed
+  `drv_types.h`; `$(M)` is the absolute module directory during the
+  kbuild pass.
+  Two of those three version gates have now been replaced, because
+  [#58](https://github.com/WimLee115/rtl8852au-build/issues/58)
+  established in this same file that `LINUX_VERSION_CODE` is not a
+  usable signal for a `cfg80211` change: distros backport individual
+  `cfg80211_ops` signature changes into kernels whose version macro
+  never moves (Ubuntu noble shipped the `.set_monitor_channel` change in
+  a `6.8.0-147` point release), and no numeric threshold separates
+  kernels needing opposite prototypes — jammy's `linux-azure`
+  `6.8.0-1064` reports the *identical* `LINUX_VERSION_CODE` as noble's
+  `6.8.0-147` yet wants the older arity. `remain_on_channel` is exactly
+  that kind of change, so it now uses the same compile-time type probe
+  #58 settled on: `__typeof__` on a NULL-cast member access gets the
+  kernel's own declared type for the member, and
+  `__builtin_types_compatible_p()` picks which of two thin shims
+  `__builtin_choose_expr` references. `rx_addr` is accepted and
+  dropped — the driver hands the request to
+  `rtw_phl_remain_on_ch_cmd()`, which has no per-request RX address, so
+  behaviour is unchanged from a pre-7.2 kernel.
+  `WIPHY_FLAG_SUPPORTS_5_10_MHZ` can't use that trick: it is an
+  enumerator, invisible to the preprocessor, so `#ifdef` cannot see it
+  and there is no type to compare. The top-level `Makefile` greps the
+  kernel's real `include/net/cfg80211.h` instead, matching only the
+  enumerator's *definition* (`NAME =`) so the kerneldoc line above the
+  enum (`@NAME: ...`) cannot produce a false positive, and passes
+  `-DRTW_HAS_WIPHY_FLAG_SUPPORTS_5_10_MHZ` when it is still there. If
+  the header can't be located the flag stays undefined: losing a
+  monitor-mode debugging nicety is recoverable, naming a removed
+  enumerator is not. `strncpy()` keeps its version gate — it is a
+  tree-wide API removal, not the kind of isolated signature change a
+  stable series backports (`os_dep/linux/ioctl_cfg80211.c`, `Makefile`,
+  `include/osdep_service_linux.h`, `phl/pltfm_ops_linux.h`).
+  Verified against both real kernels, in both directions: built the
+  module against the installed `linux-headers-7.2.15+kali-amd64` and
+  `linux-headers-7.1.5+kali-amd64` packages — each produces a clean
+  `8852au.ko`, with the `Makefile` probe reporting the enumerator
+  present on 7.1.5 and absent on 7.2.15. Also confirmed the type probe
+  is load-bearing rather than passing by accident: inverting it
+  reproduces the reported 7.2 error exactly
+  (`initialization of 'int (*)(..., u64 *, const u8 *)' from
+  incompatible pointer type 's32 (*)(..., u64 *)'`).
+- **`rtw_dev_remove()` crashed on a surprise USB removal while
+  associated.** It still called `rtw_disassoc_cmd()` on teardown, but
+  with the adapter already gone the firmware is unreachable and
+  `rtw_disconnect_cmd()` dereferenced a NULL `phl_role` — an oops at
+  `RIP: rtw_disconnect_cmd` with interrupts off. The disassoc path is
+  now skipped on surprise-remove, the same way `netdev_close()` already
+  did it, and bails out if the role is NULL
+  ([#59](https://github.com/WimLee115/rtl8852au-build/pull/59),
+  `os_dep/linux/os_intfs.c`, `core/rtw_mlme.c`).
 - **A `cfg80211` signature change some distros backport without any
   version-number tell broke the DKMS build — and took three attempts to
   stop guessing at.** Upstream commit `9c4f83092775` ("wifi: cfg80211:

@@ -29,6 +29,34 @@ RTL_SRC := $(shell pwd)
 endif
 export RTL_SRC
 
+# Linux 7.2 removed WIPHY_FLAG_SUPPORTS_5_10_MHZ from enum wiphy_flags.
+# An enumerator is invisible to the preprocessor, so the driver cannot
+# test for it with #ifdef the way it would a macro - and gating it on
+# LINUX_VERSION_CODE is exactly the mistake issue #58 cured this tree
+# of: distros backport individual cfg80211 changes into kernels whose
+# version macro never moves with them. So ask the kernel's own
+# cfg80211.h, matching only the enumerator's definition ("NAME =") so
+# that the kerneldoc line above the enum ("@NAME: ...") cannot produce
+# a false positive.
+#
+# If the header cannot be located, leave this undefined. Not
+# advertising 5/10 MHz channel support only costs a monitor-mode
+# debugging nicety, whereas naming a removed enumerator fails the
+# build outright - so silence has to mean "assume gone".
+# $(srctree) is kbuild's own variable for the kernel tree and is what
+# resolves the split Debian/Ubuntu header packages correctly: the
+# flavour package is the build directory, while cfg80211.h lives in the
+# matching -common package, which is the tree kbuild actually reads. It
+# is set only during the kbuild pass - which is the only pass where
+# ccflags-y is consulted, so the outer pass emitting nothing is correct.
+RTW_CFG80211_H := $(wildcard $(srctree)/include/net/cfg80211.h)
+ifneq ($(RTW_CFG80211_H),)
+ifeq ($(shell grep -qE '^[[:space:]]*WIPHY_FLAG_SUPPORTS_5_10_MHZ[[:space:]]*=' \
+	$(RTW_CFG80211_H) && echo yes),yes)
+ccflags-y += -DRTW_HAS_WIPHY_FLAG_SUPPORTS_5_10_MHZ
+endif
+endif
+
 ccflags-y += -I$(RTL_SRC)/include
 ccflags-y += -I$(src)/include
 
