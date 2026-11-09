@@ -7,6 +7,14 @@ changes in this file.
 
 ## [Unreleased]
 
+## [1.18.0] — 2026-11-09
+
+Extends kernel compatibility on top of `1.17.0`: kernel 7.2 support —
+the first release that builds on it — with the two `cfg80211` pieces of
+that port converted from version gates to compile-time probes of the
+kernel's own headers, plus two new USB IDs and two `phl_role` crash
+fixes.
+
 ### Added
 - **USB ID `3625:010d` for the TP-Link Archer TX30U Plus.** The adapter
   first enumerates as a Realtek mass-storage "DISK" (`0bda:1a2b`) and then
