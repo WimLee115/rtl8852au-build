@@ -104,6 +104,10 @@ extra_certificates
 signing_key.priv
 signing_key.x509
 x509.genkey
+# `make sign` writes an unencrypted Secure Boot MOK key pair here. Committing
+# MOK.priv would let anyone sign modules your firmware trusts.
+MOK.priv
+MOK.der
 
 # Python
 __pycache__/
