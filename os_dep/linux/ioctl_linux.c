@@ -16,6 +16,7 @@
 
 #include <drv_types.h>
 #include <rtw_mp.h>
+#include <linux/capability.h>
 
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 27))
@@ -8995,6 +8996,18 @@ int rtw_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 {
 	struct iwreq *wrq = (struct iwreq *)rq;
 	int ret = 0;
+
+	/*
+	 * The kernel leaves SIOCDEVPRIVATE unguarded -- dev_ioctl() checks no
+	 * capability for it, the driver is expected to -- and everything this
+	 * dispatches to changes device state: the private table behind
+	 * SIOCDEVPRIVATE writes MAC and RF registers ("write", "rfw",
+	 * "phl_set_io") and sets the channel plan, and the Android command set
+	 * behind SIOCDEVPRIVATE+1 changes the regulatory country ("COUNTRY") or
+	 * stops the driver ("STOP"). Without this check any local user could.
+	 */
+	if (!capable(CAP_NET_ADMIN))
+		return -EPERM;
 
 	switch (cmd) {
 	case RTL_IOCTL_WPA_SUPPLICANT:

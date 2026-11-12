@@ -165,8 +165,15 @@ sudo ./dkms-install.sh
 ```
 
 `dkms-install.sh` leest `PACKAGE_NAME` en `PACKAGE_VERSION` uit
-`dkms.conf`, kopieert de broncode naar `/usr/src`, registreert en
-bouwt de module via DKMS, en doet ten slotte een `modprobe`.
+`dkms.conf`, kopieert de broncode naar `/usr/src` (eigendom van root,
+alleen door root te wijzigen), registreert en bouwt de module via DKMS,
+en doet ten slotte een `modprobe`.
+
+> **Eerder geïnstalleerd met 1.18.0 of ouder?** Draai
+> `sudo ./dkms-install.sh` opnieuw vanuit een checkout van 1.18.1 of
+> nieuwer: oudere versies lieten de kopie in `/usr/src` beschrijfbaar
+> voor je gebruiker — zie
+> [`SECURITY.nl.md`](SECURITY.nl.md#gepubliceerde-advisories).
 
 Verwijderen:
 
@@ -445,6 +452,13 @@ volg de prompt, en onderteken daarna opnieuw.
   geverifieerd.
 - Het dashboard luistert standaard op loopback en vereist HTTP Basic
   Auth op elk endpoint.
+- `dkms-install.sh` installeert de DKMS-brontree als eigendom van root
+  en weigert symlinks; CI controleert de geïnstalleerde tree bij elke
+  run.
+- Het dashboard escapet alles wat het toont (SSID's kiest een aanvaller
+  zelf), weigert cross-site POSTs en valideert elke moduleparameter die
+  het naar `/etc/modprobe.d` schrijft.
+- De private ioctls van de driver vereisen `CAP_NET_ADMIN`.
 
 ## Bijdragen
 

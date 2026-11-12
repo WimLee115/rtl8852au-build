@@ -156,8 +156,13 @@ sudo ./dkms-install.sh
 ```
 
 `dkms-install.sh` reads `PACKAGE_NAME` and `PACKAGE_VERSION` from
-`dkms.conf`, copies the source to `/usr/src`, registers, builds and
-installs the module via DKMS, and finally `modprobe`s it.
+`dkms.conf`, copies the source to `/usr/src` (owned by root, writable by
+root alone), registers, builds and installs the module via DKMS, and
+finally `modprobe`s it.
+
+> **Installed 1.18.0 or earlier this way?** Re-run `sudo ./dkms-install.sh`
+> from a 1.18.1+ checkout: older versions left the `/usr/src` copy writable
+> by your user — see [`SECURITY.md`](SECURITY.md#published-advisories).
 
 Uninstall:
 
@@ -430,6 +435,12 @@ and complete the prompt, then re-sign.
   and verified by CI on every build.
 - The dashboard binds to loopback by default and requires HTTP Basic
   Auth on every endpoint.
+- `dkms-install.sh` installs the DKMS source tree owned by root and
+  refuses symlinks; CI checks the installed tree on every run.
+- The dashboard escapes everything it renders (SSIDs are attacker-chosen),
+  refuses cross-site POSTs, and validates every module parameter it writes
+  to `/etc/modprobe.d`.
+- The driver's private ioctls require `CAP_NET_ADMIN`.
 
 ## Contributing
 
