@@ -7,6 +7,81 @@ changes in this file.
 
 ## [Unreleased]
 
+## [1.18.1] — 2026-11-12
+
+Security release on top of `1.18.0`: three vulnerabilities, all shipped
+since `v1.15.0.1+8`, found in a review of the whole tree. Upgrade, re-run
+`sudo ./dkms-install.sh`, and restart the dashboard if you use it. Each one
+has an "am I affected?" check in
+[`SECURITY.md`](SECURITY.md#published-advisories).
+
+### Security
+- **Dashboard: broadcast SSIDs rendered as HTML, and a module parameter
+  written unvalidated into `/etc/modprobe.d` — together, root command
+  execution from radio range** (CVSS 3.1 8.8,
+  `AV:A/AC:L/PR:N/UI:R/S:C/C:H/I:H/A:H`; CWE-79, CWE-93). `app.js` put
+  server data into `innerHTML` unescaped — SSIDs from scans and from
+  monitor-mode frames, which any nearby transmitter chooses, the connected
+  SSID, and the USB product string, which the device itself reports. And
+  `/api/advanced` took `rtw_country_code` as free text, so a value with a
+  newline appended its own line to `/etc/modprobe.d/8852au.conf`: an
+  `install 8852au <command>` line there runs `<command>` as root on the next
+  module load, which `/api/advanced/reload` performs. Script smuggled in
+  through an SSID runs with the dashboard's credentials and can do both.
+  Every server value is now escaped (`esc()` in `app.js`), the
+  quick-connect button carries its SSID in a data attribute instead of an
+  inline `onclick`, `rtw_country_code` must be two letters or digits,
+  numbers are written in canonical form, and `write_modprobe_conf()` drops
+  any value that is not a single safe token.
+- **Dashboard: no CSRF defence.** The browser sends HTTP Basic credentials
+  by itself, so a page on any site could make it POST here — disconnect
+  Wi-Fi, toggle monitor mode, reload the module, run the tests.
+  State-changing requests whose `Origin` or `Sec-Fetch-Site` names another
+  origin are now refused, and every response carries
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer` and a CSP that rules out framing,
+  `<base>`, `<object>` and foreign form targets.
+- **Driver: private ioctls had no capability check** (CVSS 3.1 6.6,
+  `AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:L/A:H`; CWE-862). The kernel leaves
+  `SIOCDEVPRIVATE` for the driver to guard, and `rtw_ioctl()` did not, so any
+  local user could reach the vendor private-command table — MAC and RF
+  register writes (`write`, `rfw`, `phl_set_io`), the channel plan — and
+  the Android command set, `COUNTRY` and `STOP` included. `rtw_ioctl()` now
+  requires `CAP_NET_ADMIN`.
+- **`dkms-install.sh` left the DKMS source tree writable by the user who
+  owned the checkout** — a local privilege escalation to root (CVSS 3.1
+  7.3, `AV:L/AC:L/PR:L/UI:R/S:U/C:H/I:H/A:H`; CWE-732). The script copied
+  the tree to `/usr/src/<name>-<version>` with `tar -c | tar -x` running as
+  root, and a root-run `tar -x` restores the owner recorded in the archive,
+  so the copy kept the checkout's uid and its `664`/`775` modes. DKMS
+  rebuilds that tree as root on every kernel upgrade and sources its
+  `dkms.conf` as a shell script, so that user — or anything running as
+  them — could edit `dkms.conf` or the source and have root execute it on
+  the next kernel upgrade without sudo; where the DKMS MOK key is enrolled
+  for Secure Boot, DKMS also signed the resulting module. Present since the
+  DKMS scripts were added (`v1.15.0.1+8` through `v1.18.0`). The extract
+  now runs with `--no-same-owner --no-same-permissions`, followed by
+  `chown -R root:root` and `chmod -R u-s,g-s,go-w`, and the install refuses
+  a tree that contains symlinks. A new CI step fails the build if anything
+  in the installed tree is not owned by `root:root`, is writable by group
+  or other, or is a symlink.
+- **Hardening.** `CONFIG_PROC_DEBUG` proc entries are created `0600`
+  instead of the vendor's `0666`: in a debug build, `write_reg` would let
+  any local user write registers and `sec_cam` would show them the live
+  Wi-Fi keys. Default builds create no proc entries and debug builds do not
+  currently compile, so no released module exposed them. `MOK.priv` and
+  `MOK.der`, which `make sign` writes into the tree, are now git-ignored.
+
+### Fixed
+- `suspend_rtw8852au` compared with `==`, which `dash` — `/bin/sh` on
+  Debian and Ubuntu — rejects as an unexpected operator, so the sleep hook
+  never unloaded or reloaded the module there. It now uses `=`.
+
+### Added
+- `tests/test_dashboard.py`: offline regression tests for the dashboard
+  fixes through Flask's test client — no root, no hardware — run by CI.
+  9 of its 13 tests fail against 1.18.0.
+
 ## [1.18.0] — 2026-11-09
 
 Extends kernel compatibility on top of `1.17.0`: kernel 7.2 support —
