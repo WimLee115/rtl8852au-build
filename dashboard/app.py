@@ -100,6 +100,20 @@ def _enforce_auth_and_host():
     if host not in ALLOWED_HOSTS:
         return Response("forbidden host\n", status=403, mimetype="text/plain")
 
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        # Basic Auth is ambient: once the browser holds the credentials it
+        # attaches them to every request for this origin, including a form
+        # that some other site submits here (CSRF). Browsers say where a
+        # request came from, so refuse a state-changing one that came from
+        # elsewhere. Clients that send neither header (curl) still need the
+        # token, so nothing is weakened for them.
+        site = request.headers.get("Sec-Fetch-Site")
+        origin = request.headers.get("Origin")
+        if (site is not None and site not in ("same-origin", "none")) or \
+                (origin is not None and origin != request.host_url.rstrip("/")):
+            return Response("cross-site request refused\n", status=403,
+                            mimetype="text/plain")
+
     if request.path == "/api/stream":
         qtoken = request.args.get("token") or ""
         if hmac.compare_digest(qtoken, AUTH_TOKEN):
@@ -115,6 +129,21 @@ def _enforce_auth_and_host():
             headers={"WWW-Authenticate": 'Basic realm="RTL8852AU Dashboard"'},
         )
     return None
+
+
+@app.after_request
+def _security_headers(resp):
+    """No framing (clickjacking), no MIME sniffing, no Referer, and no
+    <base>, <object> or foreign form targets even if markup slips through.
+    script-src is left alone: the UI still uses inline event handlers."""
+    h = resp.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Referrer-Policy", "no-referrer")
+    h.setdefault("Content-Security-Policy",
+                 "frame-ancestors 'none'; base-uri 'none'; "
+                 "object-src 'none'; form-action 'self'")
+    return resp
 
 
 def _escape_wpa_string(value):
@@ -918,6 +947,12 @@ def api_run_tests():
 
 MODPROBE_CONF = "/etc/modprobe.d/8852au.conf"
 
+# What a module-parameter value written to MODPROBE_CONF may consist of.
+# modprobe parses that file as root, line by line: whitespace would end the
+# value and a newline would start a new directive -- `install 8852au <cmd>`
+# runs <cmd> as root on the next load.
+_MODPROBE_VALUE_RE = re.compile(r"[A-Za-z0-9_.+-]+")
+
 # Whitelist of module parameters exposed in the Advanced tab.
 # Each entry: param_name -> {type, options (for select), min/max (for number)}
 ADVANCED_PARAMS = {
@@ -931,7 +966,7 @@ ADVANCED_PARAMS = {
     "rtw_channel":        {"vtype": "number", "min": 0, "max": 165},
     "rtw_bw_mode":        {"vtype": "number", "min": 0, "max": 255},
     "rtw_channel_plan":   {"vtype": "number", "min": 0, "max": 255},
-    "rtw_country_code":   {"vtype": "text"},
+    "rtw_country_code":   {"vtype": "text", "pattern": r"[A-Za-z0-9]{2}"},
     # Energiebeheer
     "rtw_power_mgnt":     {"vtype": "select", "opts": {"0": "Uit", "1": "Minimaal", "2": "Maximaal"}},
     "rtw_ips_mode":       {"vtype": "select", "opts": {"0": "Geen", "1": "Normaal", "2": "Level 2"}},
@@ -1010,7 +1045,10 @@ def write_modprobe_conf(params):
             pass
 
     existing.update(params)
-    valid = {k: v for k, v in existing.items() if k in ADVANCED_PARAMS}
+    # Second line of defence behind api_advanced_save's validation: never
+    # write a value modprobe could read as more than a single token.
+    valid = {k: v for k, v in existing.items()
+             if k in ADVANCED_PARAMS and _MODPROBE_VALUE_RE.fullmatch(str(v))}
 
     with open(MODPROBE_CONF, "w") as f:
         f.write("# RTL8852AU advanced settings - managed by dashboard\n")
@@ -1081,15 +1119,29 @@ def api_advanced_save():
             if spec["vtype"] == "number":
                 try:
                     iv = int(sv)
-                    if "min" in spec and iv < spec["min"]:
-                        continue
-                    if "max" in spec and iv > spec["max"]:
-                        continue
                 except ValueError:
                     continue
+                if "min" in spec and iv < spec["min"]:
+                    continue
+                if "max" in spec and iv > spec["max"]:
+                    continue
+                # int() tolerates surrounding whitespace, newlines included,
+                # so store the canonical form rather than what was sent.
+                sv = str(iv)
             elif spec["vtype"] == "select":
                 if sv not in spec["opts"]:
                     continue
+            elif spec["vtype"] == "text":
+                # Free text lands verbatim in /etc/modprobe.d, which modprobe
+                # reads as root: a newline would start an `install` directive
+                # that runs a command on the next module load. Each text
+                # parameter declares the exact shape it accepts; one that
+                # declares none accepts nothing.
+                pattern = spec.get("pattern")
+                if not pattern or not re.fullmatch(pattern, sv):
+                    continue
+            else:
+                continue
             safe[k] = sv
         if safe:
             try:

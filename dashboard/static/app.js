@@ -308,6 +308,18 @@ let THEME = localStorage.getItem('rtw_theme') || 'dark';
 
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.en[k] || k; }
 
+// Escape a value for HTML text or a quoted attribute. Every server-supplied
+// value that reaches innerHTML goes through this: much of it comes from the
+// air or the USB bus — SSIDs and monitor-mode frame lines are whatever nearby
+// transmitters broadcast, the USB product string is whatever the device
+// reports — and a 32-byte SSID is room enough for `<img src=x onerror=…>` in
+// a page that drives a root process.
+function esc(v) {
+    return String(v ?? '').replace(/[&<>"'`]/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;',
+    })[c]);
+}
+
 function applyTranslations() {
     document.documentElement.setAttribute('lang', LANG);
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -752,12 +764,12 @@ function renderFrames() {
     const rows = frames.slice().reverse().slice(0, 200).map(f => {
         const ts = new Date(f.t * 1000).toLocaleTimeString();
         return `<tr>
-            <td style="font-family:monospace;font-size:0.8rem;">${ts}</td>
-            <td>${f.type || '?'}</td>
-            <td style="font-family:monospace;font-size:0.8rem;">${f.src || ''}</td>
-            <td style="font-family:monospace;font-size:0.8rem;">${f.dst || ''}</td>
-            <td>${f.ssid || ''}</td>
-            <td>${f.rssi != null ? f.rssi + ' dBm' : ''}</td>
+            <td style="font-family:monospace;font-size:0.8rem;">${esc(ts)}</td>
+            <td>${esc(f.type || '?')}</td>
+            <td style="font-family:monospace;font-size:0.8rem;">${esc(f.src)}</td>
+            <td style="font-family:monospace;font-size:0.8rem;">${esc(f.dst)}</td>
+            <td>${esc(f.ssid)}</td>
+            <td>${f.rssi != null ? esc(f.rssi) + ' dBm' : ''}</td>
         </tr>`;
     });
     tbody.innerHTML = rows.join('');
@@ -809,11 +821,11 @@ async function refreshDriverInfo() {
         const r = await fetch('/api/driver');
         const d = await r.json();
         document.getElementById('driver-info').innerHTML = `
-            <div class="info-row"><span class="info-label">${t('label.module')}</span><span class="info-value">${d.module_name}</span></div>
-            <div class="info-row"><span class="info-label">${t('label.driver')}</span><span class="info-value">${d.driver_name}</span></div>
-            <div class="info-row"><span class="info-label">${t('label.kernel')}</span><span class="info-value">${d.kernel_version}</span></div>
-            <div class="info-row"><span class="info-label">${t('label.srcversion')}</span><span class="info-value" style="font-size:0.75rem;">${d.srcversion}</span></div>
-            <div class="info-row"><span class="info-label">${t('label.version')}</span><span class="info-value">${d.modinfo?.version || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.module')}</span><span class="info-value">${esc(d.module_name)}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.driver')}</span><span class="info-value">${esc(d.driver_name)}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.kernel')}</span><span class="info-value">${esc(d.kernel_version)}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.srcversion')}</span><span class="info-value" style="font-size:0.75rem;">${esc(d.srcversion)}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.version')}</span><span class="info-value">${esc(d.modinfo?.version || 'N/A')}</span></div>
         `;
     } catch(e) {}
 }
@@ -834,22 +846,28 @@ async function doScan() {
             const pct = signalPercent(n.signal);
             const col = signalColor(n.signal);
             html += `<tr>
-                <td><strong>${n.ssid || t('opt.hidden')}</strong></td>
-                <td style="font-family:monospace;font-size:0.8rem;">${n.bssid}</td>
+                <td><strong>${n.ssid ? esc(n.ssid) : t('opt.hidden')}</strong></td>
+                <td style="font-family:monospace;font-size:0.8rem;">${esc(n.bssid)}</td>
                 <td>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <div style="width:60px;height:6px;background:#334155;border-radius:3px;">
                             <div style="width:${pct}%;height:100%;background:${col};border-radius:3px;"></div>
                         </div>
-                        <span style="font-size:0.8rem;">${n.signal !== null ? n.signal + ' dBm' : '?'}</span>
+                        <span style="font-size:0.8rem;">${n.signal !== null ? esc(n.signal) + ' dBm' : '?'}</span>
                     </div>
                 </td>
-                <td>${n.frequency || '?'} MHz</td>
-                <td>${n.security}</td>
-                <td><button class="btn btn-success btn-sm" onclick="quickConnect('${n.ssid.replace(/'/g,"\\'")}')">${t('btn.quickconnect')}</button></td>
+                <td>${esc(n.frequency || '?')} MHz</td>
+                <td>${esc(n.security)}</td>
+                <td><button class="btn btn-success btn-sm" data-ssid="${esc(n.ssid)}">${t('btn.quickconnect')}</button></td>
             </tr>`;
         }
-        document.getElementById('network-list').innerHTML = html || `<tr><td colspan="6">${t('scan.none')}</td></tr>`;
+        const list = document.getElementById('network-list');
+        list.innerHTML = html || `<tr><td colspan="6">${t('scan.none')}</td></tr>`;
+        // The SSID travels in a data attribute rather than an inline
+        // onclick="quickConnect('…')": quoting a broadcast string into
+        // JavaScript inside an HTML attribute cannot be done safely by hand.
+        list.querySelectorAll('button[data-ssid]').forEach(b =>
+            b.addEventListener('click', () => quickConnect(b.dataset.ssid)));
     } catch(e) {
         document.getElementById('scan-status').textContent = t('scan.error');
     }
@@ -971,12 +989,14 @@ const runTests = withLongRunPause(async function _runTests() {
 
         let html = '';
         if (d.output) {
-            html = String(d.output)
+            // Escape first, then add the markup: test output quotes interface
+            // names, scan results and kernel log lines.
+            html = esc(d.output)
                 .replace(/\.\.\.\s*ok/g, '... <span class="test-pass">OK</span>')
                 .replace(/FAIL/g, '<span class="test-fail">FAIL</span>')
                 .replace(/ERROR/g, '<span class="test-fail">ERROR</span>');
         }
-        document.getElementById('test-output').innerHTML = html || d.stderr || t('tests.nooutput');
+        document.getElementById('test-output').innerHTML = html || esc(d.stderr) || t('tests.nooutput');
 
         if (d.report && typeof d.report === 'object') {
             const rp = d.report;
@@ -989,8 +1009,8 @@ const runTests = withLongRunPause(async function _runTests() {
             const skipped = rp.skipped != null ? rp.skipped : 0;
             document.getElementById('test-summary').innerHTML =
                 `<span style="color:${color};font-size:1.1rem;font-weight:600;">` +
-                `${passed}/${total} ${t('tests.passed')}</span> | ` +
-                `${failed} ${t('tests.failed')} | ${errors} ${t('tests.errors')} | ${skipped} ${t('tests.skipped')}`;
+                `${esc(passed)}/${esc(total)} ${t('tests.passed')}</span> | ` +
+                `${esc(failed)} ${t('tests.failed')} | ${esc(errors)} ${t('tests.errors')} | ${esc(skipped)} ${t('tests.skipped')}`;
         }
     } catch(e) {
         // Surface the actual error in the UI so it's diagnosable from the
@@ -1252,21 +1272,21 @@ function renderAdvEditor(catKey, pname) {
         }
         inputHtml += '</select>';
     } else {
-        inputHtml = '<input type="text" value="'+(currentVal!==null?currentVal:'')+'" onchange="advValueChanged(\''+pname+'\', this.value)">';
+        inputHtml = '<input type="text" value="'+esc(currentVal)+'" onchange="advValueChanged(\''+pname+'\', this.value)">';
     }
 
     const pendingVal = paramData.pending;
     const statusHtml = '<span class="badge-module">'+t('adv.modulerestart')+'</span>';
     let pendingHtml = '';
     if (pendingVal !== undefined && pendingVal !== null && String(pendingVal) !== String(paramData.current)) {
-        pendingHtml = '<div class="adv-current" style="color:#fbbf24;">'+t('label.pending')+': '+pendingVal+'</div>';
+        pendingHtml = '<div class="adv-current" style="color:#fbbf24;">'+t('label.pending')+': '+esc(pendingVal)+'</div>';
     }
 
     el.innerHTML =
         '<div class="adv-editor-label">'+t('label.property')+'</div>' +
         '<div class="adv-editor-name">'+L(pdef)+' '+statusHtml+'</div>' +
         '<div class="adv-editor-input">'+inputHtml+'</div>' +
-        '<div class="adv-current">'+t('label.current')+': '+paramData.current+'</div>' +
+        '<div class="adv-current">'+t('label.current')+': '+esc(paramData.current)+'</div>' +
         pendingHtml +
         '<div class="adv-desc">'+D(pdef)+'</div>';
 }
@@ -1399,13 +1419,13 @@ function applyStatusPayload(d) {
     badge.className = 'status-badge ' + (d.connection.ssid ? 'badge-ok' : 'badge-err');
 
     document.getElementById('adapter-info').innerHTML = `
-        <div class="info-row"><span class="info-label">${t('label.interface')}</span><span class="info-value">${d.interface}</span></div>
-        <div class="info-row"><span class="info-label">${t('label.mac')}</span><span class="info-value">${d.mac_address}</span></div>
-        <div class="info-row"><span class="info-label">${t('label.ip')}</span><span class="info-value">${d.ip_address || t('status.none')}</span></div>
-        <div class="info-row"><span class="info-label">${t('label.status')}</span><span class="info-value">${d.operstate}</span></div>
-        <div class="info-row"><span class="info-label">${t('label.mtu')}</span><span class="info-value">${d.mtu}</span></div>
-        <div class="info-row"><span class="info-label">${t('label.usbspeed')}</span><span class="info-value">${d.usb_speed_mbps} Mbps</span></div>
-        <div class="info-row"><span class="info-label">${t('label.usbdev')}</span><span class="info-value">${d.usb_vendor}:${d.usb_product} (${d.usb_product_name})</span></div>
+        <div class="info-row"><span class="info-label">${t('label.interface')}</span><span class="info-value">${esc(d.interface)}</span></div>
+        <div class="info-row"><span class="info-label">${t('label.mac')}</span><span class="info-value">${esc(d.mac_address)}</span></div>
+        <div class="info-row"><span class="info-label">${t('label.ip')}</span><span class="info-value">${d.ip_address ? esc(d.ip_address) : t('status.none')}</span></div>
+        <div class="info-row"><span class="info-label">${t('label.status')}</span><span class="info-value">${esc(d.operstate)}</span></div>
+        <div class="info-row"><span class="info-label">${t('label.mtu')}</span><span class="info-value">${esc(d.mtu)}</span></div>
+        <div class="info-row"><span class="info-label">${t('label.usbspeed')}</span><span class="info-value">${esc(d.usb_speed_mbps)} Mbps</span></div>
+        <div class="info-row"><span class="info-label">${t('label.usbdev')}</span><span class="info-value">${esc(d.usb_vendor)}:${esc(d.usb_product)} (${esc(d.usb_product_name)})</span></div>
     `;
 
     const conn = d.connection;
@@ -1414,11 +1434,11 @@ function applyStatusPayload(d) {
         const pct = signalPercent(conn.signal_dbm);
         const col = signalColor(conn.signal_dbm);
         connHtml = `
-            <div class="info-row"><span class="info-label">${t('th.ssid')}</span><span class="info-value">${conn.ssid}</span></div>
-            <div class="info-row"><span class="info-label">${t('label.signal')}</span><span class="info-value">${conn.signal_dbm} dBm</span></div>
+            <div class="info-row"><span class="info-label">${t('th.ssid')}</span><span class="info-value">${esc(conn.ssid)}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.signal')}</span><span class="info-value">${esc(conn.signal_dbm)} dBm</span></div>
             <div class="signal-bar"><div class="signal-fill" style="width:${pct}%;background:${col};"></div></div>
-            <div class="info-row"><span class="info-label">${t('label.freq')}</span><span class="info-value">${conn.frequency_mhz} MHz</span></div>
-            <div class="info-row"><span class="info-label">${t('label.txbitrate')}</span><span class="info-value">${conn.tx_bitrate || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-label">${t('label.freq')}</span><span class="info-value">${esc(conn.frequency_mhz)} MHz</span></div>
+            <div class="info-row"><span class="info-label">${t('label.txbitrate')}</span><span class="info-value">${esc(conn.tx_bitrate || 'N/A')}</span></div>
         `;
     } else {
         connHtml = `<div style="color:var(--text-dim);padding:20px;text-align:center;">${t('conn.notconnected')}</div>`;
@@ -1431,10 +1451,10 @@ function applyStatusPayload(d) {
         <div class="stat-box"><div class="stat-value">${formatBytes(s.rx_bytes)}</div><div class="stat-label">${t('stat.rx_data')}</div></div>
         <div class="stat-box"><div class="stat-value">${s.tx_packets.toLocaleString()}</div><div class="stat-label">${t('stat.tx_pkts')}</div></div>
         <div class="stat-box"><div class="stat-value">${s.rx_packets.toLocaleString()}</div><div class="stat-label">${t('stat.rx_pkts')}</div></div>
-        <div class="stat-box"><div class="stat-value">${s.tx_errors}</div><div class="stat-label">${t('stat.tx_err')}</div></div>
-        <div class="stat-box"><div class="stat-value">${s.rx_errors}</div><div class="stat-label">${t('stat.rx_err')}</div></div>
-        <div class="stat-box"><div class="stat-value">${s.tx_dropped}</div><div class="stat-label">${t('stat.tx_drop')}</div></div>
-        <div class="stat-box"><div class="stat-value">${s.rx_dropped}</div><div class="stat-label">${t('stat.rx_drop')}</div></div>
+        <div class="stat-box"><div class="stat-value">${esc(s.tx_errors)}</div><div class="stat-label">${t('stat.tx_err')}</div></div>
+        <div class="stat-box"><div class="stat-value">${esc(s.rx_errors)}</div><div class="stat-label">${t('stat.rx_err')}</div></div>
+        <div class="stat-box"><div class="stat-value">${esc(s.tx_dropped)}</div><div class="stat-label">${t('stat.tx_drop')}</div></div>
+        <div class="stat-box"><div class="stat-value">${esc(s.rx_dropped)}</div><div class="stat-label">${t('stat.rx_drop')}</div></div>
     `;
 }
 
