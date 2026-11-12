@@ -3,7 +3,8 @@
 # DKMS install script for the rtl8852au out-of-tree driver.
 #
 # Reads PACKAGE_NAME and PACKAGE_VERSION from dkms.conf and:
-#   1. Copies the source tree to /usr/src/<name>-<version>
+#   1. Copies the source tree to /usr/src/<name>-<version>, owned by root
+#      and writable by root alone
 #   2. Registers, builds, and installs the module via DKMS
 #   3. Loads the module with modprobe
 #
@@ -94,14 +95,41 @@ done
 echo "==> Copying source to ${SRC_DIR}"
 rm -rf "${SRC_DIR}"
 mkdir -p "${SRC_DIR}"
-# Copy everything except VCS / build artefacts
+# Copy everything except VCS / build artefacts.
+#
+# The copy must end up owned by root and writable by root alone. DKMS rebuilds
+# it unattended, as root, on every kernel upgrade — it sources dkms.conf as a
+# shell script and runs make in the tree — and signs the module it builds with
+# the DKMS MOK key where one is set up. A tar extract run as root restores the
+# owner recorded in the archive by default, though, so through 1.18.0 the copy
+# kept the uid of whoever owned the checkout: that user, or anything running
+# as them, could edit dkms.conf or the source and have root execute it on the
+# next kernel upgrade without ever touching sudo — and, with Secure Boot, get
+# the result signed and loaded too.
+#
+# --no-same-owner / --no-same-permissions make the extract create root-owned
+# files under root's umask; the chown/chmod pass then pins the result down
+# whatever that umask is, and strips any set-id bit the checkout carried.
 tar --exclude='./.git' \
     --exclude='./.github' \
     --exclude='./*.ko' \
     --exclude='./*.o' \
     --exclude='./Module.symvers' \
     --exclude='./modules.order' \
-    -cf - . | tar -xf - -C "${SRC_DIR}"
+    -cf - . | tar -xf - -C "${SRC_DIR}" --no-same-owner --no-same-permissions
+chown -R root:root "${SRC_DIR}"
+chmod -R u-s,g-s,go-w "${SRC_DIR}"
+
+# The tree ships no symlinks, and the copy must not gain one: a link pointing
+# back into a user-writable directory would reopen the hole the pass above
+# closes. Checked on the copy rather than the checkout, so a link slipped into
+# the checkout after a check but before tar read it is still caught.
+if [[ -n "$(find "${SRC_DIR}" -type l -print -quit)" ]]; then
+    echo "error: refusing to install: the source tree contains symlinks:" >&2
+    find "${SRC_DIR}" -type l -printf '  %P -> %l\n' >&2
+    rm -rf "${SRC_DIR}"
+    exit 1
+fi
 
 echo "==> dkms add"
 dkms add -m "${PKG_NAME}" -v "${PKG_VER}"

@@ -263,6 +263,26 @@ jobs:
       - name: Install via DKMS
         run: sudo ./dkms-install.sh
 
+      - name: Installed source tree is root-owned
+        # DKMS rebuilds /usr/src/<name>-<version> as root on every kernel
+        # upgrade, sourcing its dkms.conf as a shell script. Through 1.18.0 a
+        # root-run `tar -x` kept the checkout's owner on that tree -- here the
+        # runner user -- so whoever owned the checkout could rewrite what root
+        # later runs. This checkout is not root's, so the gate fails on any
+        # regression: nothing in the tree may be owned by anyone but root,
+        # writable by group or other, or a symlink.
+        run: |
+          name="$(awk -F'"' '/^PACKAGE_NAME=/{print $2}' dkms.conf)"
+          ver="$(awk -F'"' '/^PACKAGE_VERSION=/{print $2}' dkms.conf)"
+          src="/usr/src/${name}-${ver}"
+          test -d "$src"
+          bad="$(sudo find "$src" \( ! -user root -o ! -group root -o -perm /022 -o -type l \) -print)"
+          if [ -n "$bad" ]; then
+            echo "::error title=Insecure DKMS source tree::${src} is not exclusively root-writable"
+            printf '%s\n' "$bad" | head -20
+            exit 1
+          fi
+
       - name: DKMS status
         run: dkms status | grep rtl8852au
 
